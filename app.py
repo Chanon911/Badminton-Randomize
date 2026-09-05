@@ -3,7 +3,7 @@ import random
 import re
 
 # --- ตั้งค่าหน้าเว็บให้ดูมินิมอล ---
-st.set_page_config(page_title="Randomizer Hub", page_icon="🎲", layout="centered")
+st.set_page_config(page_title="Hiso Random Hub", page_icon="🎲", layout="centered")
 
 # --- โหลดฟอนต์ Kanit และซ่อนเมนูที่ไม่จำเป็นของ Streamlit ---
 st.markdown("""
@@ -35,7 +35,7 @@ if 'waiting_data' not in st.session_state: st.session_state.waiting_data = ({}, 
 st.title("🎲 Randomizer Hub")
 
 # --- กล่องใส่รายชื่อ (ย้ายมาไว้หน้าหลัก) ---
-st.subheader("👥 รายชื่อผู้เล่นทั้งหมด")
+st.subheader("👥 รายชื่อสมาชิกทั้งหมด")
 raw_players = st.text_area("พิมพ์รายชื่อเว้นวรรค (ข้อมูลนี้ใช้ร่วมกันทุกระบบด้านล่าง)", "1 2 3 4 5 6 7 8 9 10")
 player_list = [name.strip() for name in re.split(r'[,\s]+', raw_players) if name.strip()]
 
