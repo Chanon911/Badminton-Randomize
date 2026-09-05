@@ -10,17 +10,14 @@ st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
         
-        /* บังคับใช้ฟอนต์ Kanit */
         html, body, p, h1, h2, h3, h4, h5, h6, label, button, input, textarea, select, li, a {
             font-family: 'Kanit', sans-serif !important;
         }
         
-        /* ซ่อนเมนู Streamlit และ Footer เพื่อความมินิมอล */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         header {visibility: hidden;}
         
-        /* ตกแต่งปุ่มให้ดูคลีนขึ้น */
         .stButton>button {
             border-radius: 8px;
             font-weight: 500;
@@ -35,22 +32,19 @@ if 'round_num' not in st.session_state: st.session_state.round_num = 1
 if 'current_matches' not in st.session_state: st.session_state.current_matches = []
 if 'waiting_data' not in st.session_state: st.session_state.waiting_data = ({}, [])
 
-# --- แถบตั้งค่าด้านข้าง (ใช้รายชื่อร่วมกันทั้งแอป) ---
-with st.sidebar:
-    st.header("⚙️ รายชื่อผู้เล่น")
-    raw_players = st.text_area("พิมพ์ชื่อเว้นวรรค (ใช้ร่วมกันทุกหน้า)", "ชานนท์ ภู ธาม จักร ขมิ้น มิ้น พีช ปอย แพรว เตอร์x ช้าง คิน ฟิล์ม")
-    player_list = [name.strip() for name in re.split(r'[,\s]+', raw_players) if name.strip()]
-    
-    st.markdown("---")
-    if st.button("🔄 ล้างสถิติแบดมินตัน"):
-        st.session_state.player_stats = {}
-        st.session_state.priority_players = []
-        st.session_state.round_num = 1
-        st.success("รีเซ็ตเรียบร้อย!")
+st.title("🎲 Randomizer Hub")
 
+# --- กล่องใส่รายชื่อ (ย้ายมาไว้หน้าหลัก) ---
+st.subheader("👥 รายชื่อผู้เล่นทั้งหมด")
+raw_players = st.text_area("พิมพ์รายชื่อเว้นวรรค (ข้อมูลนี้ใช้ร่วมกันทุกระบบด้านล่าง)", "1 2 3 4 5 6 7 8 9 10")
+player_list = [name.strip() for name in re.split(r'[,\s]+', raw_players) if name.strip()]
+
+# อัปเดตรายชื่อใหม่เข้าสู่ระบบสถิติ
 for p in player_list:
     if p not in st.session_state.player_stats:
         st.session_state.player_stats[p] = {'played': 0, 'wins': 0}
+
+st.markdown("---")
 
 # --- สร้าง Tabs แยก 4 ระบบ ---
 tab1, tab2, tab3, tab4 = st.tabs(["🏸 แบดมินตัน", "🚗 สุ่มขึ้นรถ", "⚽ ฟุตบอล", "📚 ทำงานกลุ่ม"])
@@ -59,16 +53,28 @@ tab1, tab2, tab3, tab4 = st.tabs(["🏸 แบดมินตัน", "🚗 ส�
 # TAB 1: ระบบจัดทีมแบดมินตัน
 # ==========================================
 with tab1:
+    st.subheader("🏸 สุ่มทีมแบดมินตัน")
+    
     col1, col2 = st.columns(2)
     with col1:
-        num_courts = st.number_input("จำนวนคอร์ด", min_value=1, max_value=10, value=4)
+        num_courts = st.number_input("จำนวนคอร์ด", min_value=1, max_value=10, value=2)
     with col2:
         play_type = st.radio("ประเภทการเล่น", ["ตีคู่ (ทีมละ 2 คน)", "ตีเดี่ยว (ทีมละ 1 คน)"])
-    
+        
+    # ปุ่มรีเซ็ตแบดมินตัน ย้ายมาไว้ตรงนี้
+    if st.button("🔄 ล้างสถิติแบดมินตัน", key="reset_badminton"):
+        st.session_state.player_stats = {}
+        st.session_state.priority_players = []
+        st.session_state.round_num = 1
+        for p in player_list:
+            st.session_state.player_stats[p] = {'played': 0, 'wins': 0}
+        st.success("รีเซ็ตสถิติแบดมินตันเรียบร้อย!")
+        st.rerun()
+
     players_per_team = 2 if "ตีคู่" in play_type else 1
 
     if st.button(f"🎲 สุ่มจัดทีมรอบที่ {st.session_state.round_num}", type="primary", use_container_width=True):
-        slots_needed = num_courts * players_per_team * 2
+        slots_needed = int(num_courts) * players_per_team * 2
         priority_players = [p for p in st.session_state.priority_players if p in player_list]
         regular_players = [p for p in player_list if p not in priority_players]
         
@@ -153,6 +159,7 @@ with tab1:
 # TAB 2: ระบบสุ่มคนขึ้นรถ
 # ==========================================
 with tab2:
+    st.subheader("🚗 สุ่มคนขึ้นรถ")
     num_cars = st.number_input("จำนวนรถทั้งหมด (คัน)", min_value=1, max_value=10, value=2, key="num_cars")
     cars_info = []
     
@@ -172,7 +179,7 @@ with tab2:
         
         results = []
         for car in cars_info:
-            car_passengers = [passengers_list.pop(0) for _ in range(car["capacity"]) if passengers_list]
+            car_passengers = [passengers_list.pop(0) for _ in range(int(car["capacity"])) if passengers_list]
             results.append({"car_num": car["car_num"], "driver": car["driver"], "passengers": car_passengers})
             
         st.markdown("---")
@@ -188,9 +195,10 @@ with tab2:
             st.success("✅ จัดคนขึ้นรถครบทุกคน!")
 
 # ==========================================
-# TAB 3: ระบบจัดทีมฟุตบอล (มีสุ่มเสื้อกั๊ก + เขี่ยลูก)
+# TAB 3: ระบบจัดทีมฟุตบอล
 # ==========================================
 with tab3:
+    st.subheader("⚽ สุ่มทีมฟุตบอล")
     col1, col2 = st.columns(2)
     with col1:
         num_fb_teams = st.number_input("จำนวนทีมฟุตบอล", min_value=2, max_value=10, value=2)
@@ -209,7 +217,6 @@ with tab3:
         st.markdown("---")
         st.subheader("🏁 ผลการจัดทีมฟุตบอล")
         
-        # สุ่มหาทีมที่ใส่เสื้อกั๊ก (ครึ่งหนึ่งของจำนวนทีม) และทีมที่ได้เขี่ยลูก
         team_indices = list(range(len(fb_teams)))
         num_bibs = max(1, len(fb_teams) // 2)
         teams_with_bibs = random.sample(team_indices, k=num_bibs)
@@ -220,11 +227,8 @@ with tab3:
             col_idx = i % 2
             with cols[col_idx]:
                 st.markdown(f"#### ⚽ ทีมที่ {i+1}")
-                
-                # โชว์สถานะเสื้อกั๊กและเขี่ยลูก
                 bib_status = "🎽 **ใส่เสื้อกั๊ก**" if i in teams_with_bibs else "👕 เสื้อสีปกติ"
                 kickoff_status = "👟 **ได้เขี่ยลูกก่อน!**" if i == team_kickoff else "🛡️ รอรับบอล"
-                
                 st.caption(f"{bib_status} | {kickoff_status}")
                 
                 if team:
@@ -241,22 +245,27 @@ with tab3:
 # TAB 4: ระบบสุ่มทำงานกลุ่ม
 # ==========================================
 with tab4:
-    st.write("แบ่งสมาชิกออกเป็นกลุ่มย่อยๆ สามารถกำหนดจำนวนกลุ่มและคนในกลุ่มได้")
+    st.subheader("📚 แบ่งกลุ่มทำงาน")
+    num_groups = st.number_input("จำนวนกลุ่มที่ต้องการทั้งหมด", min_value=1, max_value=20, value=3, key="num_groups")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        num_groups = st.number_input("จำนวนกลุ่มที่ต้องการ", min_value=1, max_value=20, value=3)
-    with col2:
-        ppl_per_group = st.number_input("จำนวนคนต่อกลุ่ม", min_value=1, max_value=20, value=4)
-        
+    st.write("ระบุจำนวนสมาชิกที่ต้องการในแต่ละกลุ่ม:")
+    group_sizes = []
+    
+    # จัดหน้าต่างรับค่าให้เรียงเป็นแถวละ 3 กลุ่ม
+    cols = st.columns(3)
+    for i in range(int(num_groups)):
+        with cols[i % 3]:
+            # สร้างตัวแปรรับค่าจำนวนคนแบบแยกเฉพาะแต่ละกลุ่ม
+            size = st.number_input(f"กลุ่มที่ {i+1} (คน)", min_value=1, max_value=20, value=3, key=f"grp_size_{i}")
+            group_sizes.append(int(size))
+            
     if st.button("🎲 สุ่มกลุ่มทำงาน", type="primary", use_container_width=True):
         grp_players = player_list.copy()
         random.shuffle(grp_players)
         
         groups = []
-        for _ in range(int(num_groups)):
-            # ดึงคนใส่กลุ่มตามจำนวนที่ระบุ
-            grp = [grp_players.pop(0) for _ in range(int(ppl_per_group)) if grp_players]
+        for i, target_size in enumerate(group_sizes):
+            grp = [grp_players.pop(0) for _ in range(target_size) if grp_players]
             groups.append(grp)
             
         st.markdown("---")
@@ -266,13 +275,12 @@ with tab4:
         for i, grp in enumerate(groups):
             col_idx = i % 2
             with cols[col_idx]:
-                st.markdown(f"**📝 กลุ่มที่ {i+1}** ({len(grp)} คน)")
+                st.markdown(f"**📝 กลุ่มที่ {i+1}** (กำหนด {group_sizes[i]} คน | ได้ {len(grp)} คน)")
                 if grp:
                     st.write(", ".join(grp))
                 else:
                     st.write("*(ไม่มีสมาชิก)*")
                 st.write("")
                 
-        # หากมีคนเหลือ (เศษ) ให้แจ้งเตือน
         if grp_players:
             st.warning(f"👤 **คนที่เหลือ (ไม่มีกลุ่ม - {len(grp_players)} คน):** {', '.join(grp_players)}")
