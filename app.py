@@ -52,8 +52,8 @@ for p in player_list:
     if p not in st.session_state.player_stats:
         st.session_state.player_stats[p] = {'played': 0, 'wins': 0}
 
-# --- สร้าง Tabs แยก 3 ระบบ ---
-tab1, tab2, tab3 = st.tabs(["🏸 แบดมินตัน", "🚗 จัดคนขึ้นรถ", "⚽ ทีมฟุตบอล"])
+# --- สร้าง Tabs แยก 4 ระบบ ---
+tab1, tab2, tab3, tab4 = st.tabs(["🏸 แบดมินตัน", "🚗 สุ่มขึ้นรถ", "⚽ ฟุตบอล", "📚 ทำงานกลุ่ม"])
 
 # ==========================================
 # TAB 1: ระบบจัดทีมแบดมินตัน
@@ -188,7 +188,7 @@ with tab2:
             st.success("✅ จัดคนขึ้นรถครบทุกคน!")
 
 # ==========================================
-# TAB 3: ระบบจัดทีมฟุตบอล
+# TAB 3: ระบบจัดทีมฟุตบอล (มีสุ่มเสื้อกั๊ก + เขี่ยลูก)
 # ==========================================
 with tab3:
     col1, col2 = st.columns(2)
@@ -209,12 +209,24 @@ with tab3:
         st.markdown("---")
         st.subheader("🏁 ผลการจัดทีมฟุตบอล")
         
-        # จัดเรียงผลลัพธ์เป็น 2 คอลัมน์ให้ดูสวยงาม
+        # สุ่มหาทีมที่ใส่เสื้อกั๊ก (ครึ่งหนึ่งของจำนวนทีม) และทีมที่ได้เขี่ยลูก
+        team_indices = list(range(len(fb_teams)))
+        num_bibs = max(1, len(fb_teams) // 2)
+        teams_with_bibs = random.sample(team_indices, k=num_bibs)
+        team_kickoff = random.choice(team_indices)
+        
         cols = st.columns(2)
         for i, team in enumerate(fb_teams):
             col_idx = i % 2
             with cols[col_idx]:
-                st.markdown(f"**⚽ ทีมที่ {i+1}**")
+                st.markdown(f"#### ⚽ ทีมที่ {i+1}")
+                
+                # โชว์สถานะเสื้อกั๊กและเขี่ยลูก
+                bib_status = "🎽 **ใส่เสื้อกั๊ก**" if i in teams_with_bibs else "👕 เสื้อสีปกติ"
+                kickoff_status = "👟 **ได้เขี่ยลูกก่อน!**" if i == team_kickoff else "🛡️ รอรับบอล"
+                
+                st.caption(f"{bib_status} | {kickoff_status}")
+                
                 if team:
                     for p in team:
                         st.write(f"- {p}")
@@ -224,3 +236,43 @@ with tab3:
                 
         if fb_players:
             st.warning(f"🏃 **ตัวสำรอง / รอลงสนาม ({len(fb_players)} คน):** {', '.join(fb_players)}")
+
+# ==========================================
+# TAB 4: ระบบสุ่มทำงานกลุ่ม
+# ==========================================
+with tab4:
+    st.write("แบ่งสมาชิกออกเป็นกลุ่มย่อยๆ สามารถกำหนดจำนวนกลุ่มและคนในกลุ่มได้")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        num_groups = st.number_input("จำนวนกลุ่มที่ต้องการ", min_value=1, max_value=20, value=3)
+    with col2:
+        ppl_per_group = st.number_input("จำนวนคนต่อกลุ่ม", min_value=1, max_value=20, value=4)
+        
+    if st.button("🎲 สุ่มกลุ่มทำงาน", type="primary", use_container_width=True):
+        grp_players = player_list.copy()
+        random.shuffle(grp_players)
+        
+        groups = []
+        for _ in range(int(num_groups)):
+            # ดึงคนใส่กลุ่มตามจำนวนที่ระบุ
+            grp = [grp_players.pop(0) for _ in range(int(ppl_per_group)) if grp_players]
+            groups.append(grp)
+            
+        st.markdown("---")
+        st.subheader("📚 สรุปรายชื่อกลุ่มทำงาน")
+        
+        cols = st.columns(2)
+        for i, grp in enumerate(groups):
+            col_idx = i % 2
+            with cols[col_idx]:
+                st.markdown(f"**📝 กลุ่มที่ {i+1}** ({len(grp)} คน)")
+                if grp:
+                    st.write(", ".join(grp))
+                else:
+                    st.write("*(ไม่มีสมาชิก)*")
+                st.write("")
+                
+        # หากมีคนเหลือ (เศษ) ให้แจ้งเตือน
+        if grp_players:
+            st.warning(f"👤 **คนที่เหลือ (ไม่มีกลุ่ม - {len(grp_players)} คน):** {', '.join(grp_players)}")
