@@ -22,6 +22,15 @@ st.markdown("""
             border-radius: 8px;
             font-weight: 500;
         }
+        
+        /* จัดตำแหน่ง VS ให้อยู่กึ่งกลาง */
+        .vs-text {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 15px;
+            color: #555;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -34,12 +43,11 @@ if 'waiting_data' not in st.session_state: st.session_state.waiting_data = ({}, 
 
 st.title("🎲 Hiso Random Hub")
 
-# --- กล่องใส่รายชื่อ (ย้ายมาไว้หน้าหลัก) ---
-st.subheader("👥 รายชื่อสมาชิกทั้งหมด")
+# --- กล่องใส่รายชื่อ (หน้าหลัก) ---
+st.subheader("👥 รายชื่อผู้เล่นทั้งหมด")
 raw_players = st.text_area("พิมพ์รายชื่อเว้นวรรค (ข้อมูลนี้ใช้ร่วมกันทุกระบบด้านล่าง)", "1 2 3 4 5 6 7 8 9 10")
 player_list = [name.strip() for name in re.split(r'[,\s]+', raw_players) if name.strip()]
 
-# อัปเดตรายชื่อใหม่เข้าสู่ระบบสถิติ
 for p in player_list:
     if p not in st.session_state.player_stats:
         st.session_state.player_stats[p] = {'played': 0, 'wins': 0}
@@ -61,7 +69,6 @@ with tab1:
     with col2:
         play_type = st.radio("ประเภทการเล่น", ["ตีคู่ (ทีมละ 2 คน)", "ตีเดี่ยว (ทีมละ 1 คน)"])
         
-    # ปุ่มรีเซ็ตแบดมินตัน ย้ายมาไว้ตรงนี้
     if st.button("🔄 ล้างสถิติแบดมินตัน", key="reset_badminton"):
         st.session_state.player_stats = {}
         st.session_state.priority_players = []
@@ -111,6 +118,7 @@ with tab1:
         st.session_state.waiting_data = (waiting_teams, temp_wait)
         st.session_state.priority_players = new_priority.copy()
 
+    # --- แสดงผลและกรอกคะแนน (อัปเกรดหน้าตาให้ชัดเจน) ---
     if st.session_state.current_matches:
         st.markdown("---")
         st.subheader(f"🔥 ผลการจัดทีมรอบที่ {st.session_state.round_num}")
@@ -120,15 +128,33 @@ with tab1:
             for match in st.session_state.current_matches:
                 t1 = " & ".join(match["team1"])
                 t2 = " & ".join(match["team2"])
-                st.write(f"📍 **คอร์ด {match['court']}**: [{t1}] VS [{t2}]")
+                
+                st.markdown(f"#### 📍 คอร์ดที่ {match['court']}")
+                
+                # สร้างกล่องสีแยกซ้าย-ขวาชัดเจน
+                c1, c2, c3 = st.columns([4, 1, 4])
+                with c1:
+                    st.info(f"🔵 **ทีม 1:**\n\n{t1}")
+                with c2:
+                    st.markdown("<div class='vs-text'>VS</div>", unsafe_allow_html=True)
+                with c3:
+                    st.error(f"🔴 **ทีม 2:**\n\n{t2}")
+                
+                # ตัวเลือกผลคะแนน เพิ่มชื่อคนต่อท้าย
                 results[match['court']] = st.radio(
-                    f"ผลคอร์ด {match['court']}", 
-                    ["ไม่คิดคะแนน", f"ทีม 1 ชนะ", f"ทีม 2 ชนะ"], 
-                    horizontal=True, key=f"court_{match['court']}"
+                    f"บันทึกผล คอร์ดที่ {match['court']}", 
+                    [
+                        "ไม่คิดคะแนน / เสมอ", 
+                        f"ทีม 1 ชนะ ({t1})", 
+                        f"ทีม 2 ชนะ ({t2})"
+                    ], 
+                    horizontal=True, 
+                    key=f"court_{match['court']}"
                 )
                 st.write("")
+                st.markdown("---")
             
-            if st.form_submit_button("บันทึกคะแนนและไปรอบต่อไป ✅"):
+            if st.form_submit_button("บันทึกคะแนนและไปรอบต่อไป ✅", use_container_width=True):
                 for match in st.session_state.current_matches:
                     res = results[match['court']]
                     if "ทีม 1" in res:
@@ -251,11 +277,9 @@ with tab4:
     st.write("ระบุจำนวนสมาชิกที่ต้องการในแต่ละกลุ่ม:")
     group_sizes = []
     
-    # จัดหน้าต่างรับค่าให้เรียงเป็นแถวละ 3 กลุ่ม
     cols = st.columns(3)
     for i in range(int(num_groups)):
         with cols[i % 3]:
-            # สร้างตัวแปรรับค่าจำนวนคนแบบแยกเฉพาะแต่ละกลุ่ม
             size = st.number_input(f"กลุ่มที่ {i+1} (คน)", min_value=1, max_value=20, value=3, key=f"grp_size_{i}")
             group_sizes.append(int(size))
             
