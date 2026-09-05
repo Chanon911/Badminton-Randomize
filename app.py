@@ -32,7 +32,7 @@ if 'round_num' not in st.session_state: st.session_state.round_num = 1
 if 'current_matches' not in st.session_state: st.session_state.current_matches = []
 if 'waiting_data' not in st.session_state: st.session_state.waiting_data = ({}, [])
 
-st.title("🎲 Randomizer Hub")
+st.title("🎲 Hiso Random Hub")
 
 # --- กล่องใส่รายชื่อ (ย้ายมาไว้หน้าหลัก) ---
 st.subheader("👥 รายชื่อสมาชิกทั้งหมด")
