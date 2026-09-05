@@ -5,11 +5,13 @@ import re
 # --- ตั้งค่าหน้าเว็บ ---
 st.set_page_config(page_title="Randomizer Hub", page_icon="🎲", layout="centered")
 
-# --- โหลดฟอนต์ Kanit จาก Google Fonts ---
+# --- โหลดฟอนต์ Kanit จาก Google Fonts (แก้ไขปัญหาไอคอนลูกศรแล้ว) ---
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
-        html, body, [class*="css"], [class*="st-"], p, div, h1, h2, h3, h4, h5, h6, span, label, button, input, textarea, select {
+        
+        /* บังคับใช้ฟอนต์ Kanit เฉพาะกับตัวอักษร ไม่ให้ไปกวนไอคอนระบบ */
+        html, body, p, h1, h2, h3, h4, h5, h6, label, button, input, textarea, select, li, a {
             font-family: 'Kanit', sans-serif !important;
         }
     </style>
@@ -44,7 +46,7 @@ for p in player_list:
 tab1, tab2 = st.tabs(["🏸 สุ่มทีมแบดมินตัน", "🚗 สุ่มคนขึ้นรถ"])
 
 # ==========================================
-# TAB 1: ระบบจัดทีมแบดมินตัน (โค้ดเดิม)
+# TAB 1: ระบบจัดทีมแบดมินตัน
 # ==========================================
 with tab1:
     col1, col2 = st.columns(2)
@@ -150,7 +152,7 @@ with tab1:
     st.dataframe(table_data, use_container_width=True)
 
 # ==========================================
-# TAB 2: ระบบสุ่มคนขึ้นรถ (Car Randomizer)
+# TAB 2: ระบบสุ่มคนขึ้นรถ
 # ==========================================
 with tab2:
     st.subheader("🚗 ตั้งค่าขบวนรถ")
@@ -158,15 +160,12 @@ with tab2:
     
     cars_info = []
     
-    # วนลูปสร้างกล่องตั้งค่าสำหรับรถแต่ละคัน
     for i in range(int(num_cars)):
         with st.expander(f"🚙 ตั้งค่ารถคันที่ {i+1}", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
-                # ให้เลือกคนขับจากรายชื่อ (เพิ่มตัวเลือก -ไม่มีคนขับ- ไว้บนสุด)
                 driver = st.selectbox(f"🧑‍✈️ ล็อคตัวคนขับรถ", ["- ยังไม่ระบุ -"] + player_list, key=f"driver_{i}")
             with col2:
-                # จำนวนที่นั่ง ไม่รวมคนขับ
                 capacity = st.number_input(f"💺 รับผู้โดยสารได้ (คน) *ไม่รวมคนขับ*", min_value=1, max_value=10, value=4, key=f"cap_{i}")
             
             cars_info.append({"car_num": i+1, "driver": driver, "capacity": capacity})
@@ -174,21 +173,17 @@ with tab2:
     st.markdown("---")
     if st.button("🎲 สุ่มจัดคนขึ้นรถ", type="primary", use_container_width=True):
         
-        # 1. รวบรวมรายชื่อคนขับทั้งหมด (ที่ไม่ใช่ - ยังไม่ระบุ -)
         drivers_list = [c["driver"] for c in cars_info if c["driver"] != "- ยังไม่ระบุ -"]
-        
-        # 2. คัดรายชื่อคนขับออกจากรายชื่อทั้งหมด เพื่อหา "ผู้โดยสาร"
         passengers_list = [p for p in player_list if p not in drivers_list]
-        random.shuffle(passengers_list) # สุ่มรายชื่อผู้โดยสาร
+        random.shuffle(passengers_list)
         
         results = []
         
-        # 3. จัดคนเข้ารถทีละคัน
         for car in cars_info:
             car_passengers = []
             for _ in range(car["capacity"]):
                 if passengers_list:
-                    car_passengers.append(passengers_list.pop(0)) # ดึงชื่อออกจากคิวไปใส่รถ
+                    car_passengers.append(passengers_list.pop(0))
             
             results.append({
                 "car_num": car["car_num"],
@@ -196,7 +191,6 @@ with tab2:
                 "passengers": car_passengers
             })
             
-        # 4. แสดงผลการจัดรถ
         st.subheader("🏁 ผลการจัดคนขึ้นรถ")
         for res in results:
             driver_name = res['driver'] if res['driver'] != "- ยังไม่ระบุ -" else "❓ ไม่มีคนขับ"
@@ -209,7 +203,6 @@ with tab2:
                 st.write("**👥 ผู้โดยสาร:** *(ไม่มี)*")
             st.markdown("---")
             
-        # แจ้งเตือนหากมีคนตกหล่น (ที่นั่งไม่พอ)
         if passengers_list:
             st.error(f"⚠️ **มีคนตกหล่น (ที่นั่งไม่พอ {len(passengers_list)} คน):** {', '.join(passengers_list)}")
         else:
