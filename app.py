@@ -2,8 +2,8 @@ import streamlit as st
 import random
 import re
 
-# --- ตั้งค่าหน้าเว็บให้ดูมินิมอล ---
-st.set_page_config(page_title="Hiso Random Hub", page_icon="🎲", layout="centered")
+# --- ตั้งค่าหน้าเว็บ (เปลี่ยนชื่อเป็น Hiso Random) ---
+st.set_page_config(page_title="Hiso Random", page_icon="🎲", layout="centered")
 
 # --- โหลดฟอนต์ Kanit และซ่อนเมนูที่ไม่จำเป็นของ Streamlit ---
 st.markdown("""
@@ -23,7 +23,6 @@ st.markdown("""
             font-weight: 500;
         }
         
-        /* จัดตำแหน่ง VS ให้อยู่กึ่งกลาง */
         .vs-text {
             text-align: center;
             font-size: 1.2rem;
@@ -41,7 +40,8 @@ if 'round_num' not in st.session_state: st.session_state.round_num = 1
 if 'current_matches' not in st.session_state: st.session_state.current_matches = []
 if 'waiting_data' not in st.session_state: st.session_state.waiting_data = ({}, [])
 
-st.title("🎲 Hiso Random Hub")
+# --- เปลี่ยนชื่อ Title เว็บไซต์ ---
+st.title("🎲 Hiso Random")
 
 # --- กล่องใส่รายชื่อ (หน้าหลัก) ---
 st.subheader("👥 รายชื่อผู้เล่นทั้งหมด")
@@ -118,7 +118,6 @@ with tab1:
         st.session_state.waiting_data = (waiting_teams, temp_wait)
         st.session_state.priority_players = new_priority.copy()
 
-    # --- แสดงผลและกรอกคะแนน (อัปเกรดหน้าตาให้ชัดเจน) ---
     if st.session_state.current_matches:
         st.markdown("---")
         st.subheader(f"🔥 ผลการจัดทีมรอบที่ {st.session_state.round_num}")
@@ -131,7 +130,6 @@ with tab1:
                 
                 st.markdown(f"#### 📍 คอร์ดที่ {match['court']}")
                 
-                # สร้างกล่องสีแยกซ้าย-ขวาชัดเจน
                 c1, c2, c3 = st.columns([4, 1, 4])
                 with c1:
                     st.info(f"🔵 **ทีม 1:**\n\n{t1}")
@@ -140,7 +138,6 @@ with tab1:
                 with c3:
                     st.error(f"🔴 **ทีม 2:**\n\n{t2}")
                 
-                # ตัวเลือกผลคะแนน เพิ่มชื่อคนต่อท้าย
                 results[match['court']] = st.radio(
                     f"บันทึกผล คอร์ดที่ {match['court']}", 
                     [
@@ -182,7 +179,7 @@ with tab1:
     st.dataframe(table_data, use_container_width=True)
 
 # ==========================================
-# TAB 2: ระบบสุ่มคนขึ้นรถ
+# TAB 2: ระบบสุ่มคนขึ้นรถ (ปรับการแสดงผลใหม่)
 # ==========================================
 with tab2:
     st.subheader("🚗 สุ่มคนขึ้นรถ")
@@ -209,11 +206,22 @@ with tab2:
             results.append({"car_num": car["car_num"], "driver": car["driver"], "passengers": car_passengers})
             
         st.markdown("---")
-        for res in results:
-            st.markdown(f"**🚙 รถคันที่ {res['car_num']}**")
-            st.write(f"- **คนขับ:** {res['driver'] if res['driver'] != '- ยังไม่ระบุ -' else '❓ ไม่มี'}")
-            st.write(f"- **ผู้โดยสาร:** {', '.join(res['passengers']) if res['passengers'] else '*(ไม่มี)*'}")
-            st.write("")
+        st.subheader("🏁 ผลการจัดคนขึ้นรถ")
+        
+        cols = st.columns(2)
+        colors = [st.info, st.success, st.warning, st.error]
+        
+        for i, res in enumerate(results):
+            with cols[i % 2]:
+                driver_name = res['driver'] if res['driver'] != "- ยังไม่ระบุ -" else "❓ ไม่มี"
+                pass_names = ', '.join(res['passengers']) if res['passengers'] else '*(ไม่มี)*'
+                
+                # แสดงผลเป็นกล่องสีชัดเจน
+                colors[i % 4](
+                    f"**🚙 รถคันที่ {res['car_num']}**\n\n"
+                    f"**🧑‍✈️ คนขับ:** {driver_name}\n\n"
+                    f"**👥 ผู้โดยสาร:** {pass_names}"
+                )
             
         if passengers_list:
             st.error(f"⚠️ **ที่นั่งไม่พอ! ตกหล่น {len(passengers_list)} คน:** {', '.join(passengers_list)}")
@@ -221,7 +229,7 @@ with tab2:
             st.success("✅ จัดคนขึ้นรถครบทุกคน!")
 
 # ==========================================
-# TAB 3: ระบบจัดทีมฟุตบอล
+# TAB 3: ระบบจัดทีมฟุตบอล (ปรับการแสดงผลใหม่)
 # ==========================================
 with tab3:
     st.subheader("⚽ สุ่มทีมฟุตบอล")
@@ -249,26 +257,26 @@ with tab3:
         team_kickoff = random.choice(team_indices)
         
         cols = st.columns(2)
+        colors = [st.info, st.error, st.success, st.warning]
+        
         for i, team in enumerate(fb_teams):
-            col_idx = i % 2
-            with cols[col_idx]:
-                st.markdown(f"#### ⚽ ทีมที่ {i+1}")
-                bib_status = "🎽 **ใส่เสื้อกั๊ก**" if i in teams_with_bibs else "👕 เสื้อสีปกติ"
-                kickoff_status = "👟 **ได้เขี่ยลูกก่อน!**" if i == team_kickoff else "🛡️ รอรับบอล"
-                st.caption(f"{bib_status} | {kickoff_status}")
+            with cols[i % 2]:
+                bib_status = "🎽 **ใส่เสื้อกั๊ก**" if i in teams_with_bibs else "👕 **เสื้อสีปกติ**"
+                kickoff_status = "👟 **ได้เขี่ยลูกก่อน!**" if i == team_kickoff else "🛡️ **รอรับบอล**"
+                team_names = ", ".join(team) if team else "*(ไม่มีผู้เล่น)*"
                 
-                if team:
-                    for p in team:
-                        st.write(f"- {p}")
-                else:
-                    st.write("*(ไม่มีผู้เล่น)*")
-                st.write("")
+                # แสดงผลเป็นกล่องสีชัดเจน
+                colors[i % 4](
+                    f"#### ⚽ ทีมที่ {i+1}\n\n"
+                    f"{bib_status} | {kickoff_status}\n\n"
+                    f"🏃‍♂️ **รายชื่อ:** {team_names}"
+                )
                 
         if fb_players:
             st.warning(f"🏃 **ตัวสำรอง / รอลงสนาม ({len(fb_players)} คน):** {', '.join(fb_players)}")
 
 # ==========================================
-# TAB 4: ระบบสุ่มทำงานกลุ่ม
+# TAB 4: ระบบสุ่มทำงานกลุ่ม (ปรับการแสดงผลใหม่)
 # ==========================================
 with tab4:
     st.subheader("📚 แบ่งกลุ่มทำงาน")
@@ -296,15 +304,17 @@ with tab4:
         st.subheader("📚 สรุปรายชื่อกลุ่มทำงาน")
         
         cols = st.columns(2)
+        colors = [st.success, st.warning, st.info, st.error]
+        
         for i, grp in enumerate(groups):
-            col_idx = i % 2
-            with cols[col_idx]:
-                st.markdown(f"**📝 กลุ่มที่ {i+1}** (กำหนด {group_sizes[i]} คน | ได้ {len(grp)} คน)")
-                if grp:
-                    st.write(", ".join(grp))
-                else:
-                    st.write("*(ไม่มีสมาชิก)*")
-                st.write("")
+            with cols[i % 2]:
+                grp_names = ", ".join(grp) if grp else "*(ไม่มีสมาชิก)*"
+                
+                # แสดงผลเป็นกล่องสีชัดเจน
+                colors[i % 4](
+                    f"**📝 กลุ่มที่ {i+1}** (ต้องการ {group_sizes[i]} คน | ได้ {len(grp)} คน)\n\n"
+                    f"👥 **สมาชิก:** {grp_names}"
+                )
                 
         if grp_players:
-            st.warning(f"👤 **คนที่เหลือ (ไม่มีกลุ่ม - {len(grp_players)} คน):** {', '.join(grp_players)}")
+            st.error(f"👤 **คนที่เหลือ (ไม่มีกลุ่ม - {len(grp_players)} คน):** {', '.join(grp_players)}")
