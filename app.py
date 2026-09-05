@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 import re
-import time  # นำเข้าโมดูลเวลาเพื่อทำระบบ Loading
+import time
 
 # --- ตั้งค่าหน้าเว็บ (Hiso Random) ---
 st.set_page_config(page_title="Hiso Random", page_icon="🎲", layout="centered")
@@ -32,7 +32,6 @@ st.markdown("""
             color: #555;
         }
         
-        /* ปรับแต่งหน้าตา Dashboard Metric */
         div[data-testid="metric-container"] {
             background-color: #f8f9fa;
             border-radius: 10px;
@@ -58,14 +57,13 @@ st.subheader("👥 รายชื่อผู้เล่นทั้งหม�
 raw_players = st.text_area("พิมพ์รายชื่อเว้นวรรค (ข้อมูลนี้ใช้ร่วมกันทุกระบบด้านล่าง)", "1 2 3 4 5 6 7 8 9 10")
 player_list = [name.strip() for name in re.split(r'[,\s]+', raw_players) if name.strip()]
 
-# อัปเดตรายชื่อใหม่เข้าสู่ระบบ
 for p in player_list:
     if p not in st.session_state.player_stats:
         st.session_state.player_stats[p] = {'played': 0, 'wins': 0}
     if p not in st.session_state.pair_hist:
         st.session_state.pair_hist[p] = {}
 
-# --- 📊 ฟีเจอร์ใหม่: Dashboard Metrics สรุปข้อมูลแบบ Real-time ---
+# --- 📊 Dashboard Metrics ---
 wins = [s['wins'] for s in st.session_state.player_stats.values()] if st.session_state.player_stats else [0]
 max_wins = max(wins) if wins else 0
 mvps = [p for p, s in st.session_state.player_stats.items() if s['wins'] == max_wins and max_wins > 0]
@@ -111,11 +109,8 @@ with tab1:
     players_per_team = 2 if "ตีคู่" in play_type else 1
 
     if st.button(f"🎲 สุ่มจัดทีมรอบที่ {st.session_state.round_num}", type="primary", use_container_width=True):
-        
-        # --- ⏳ ฟีเจอร์ใหม่: Loading Animation ---
         with st.spinner('กำลังสับไพ่รายชื่อ และสุ่มจับคู่... 🎲'):
-            time.sleep(1) # หน่วงเวลา 1 วินาทีให้รอลุ้น
-            
+            time.sleep(1)
             slots_needed = int(num_courts) * players_per_team * 2
             priority_players = [p for p in st.session_state.priority_players if p in player_list]
             regular_players = [p for p in player_list if p not in priority_players]
@@ -132,7 +127,6 @@ with tab1:
                 main_match_players.extend(regular_players[:needed])
                 new_priority = regular_players[needed:]
 
-            # Smart Matchmaking
             best_permutation = main_match_players
             best_penalty = float('inf')
             
@@ -173,31 +167,15 @@ with tab1:
             st.session_state.waiting_data = (waiting_teams, temp_wait)
             st.session_state.priority_players = new_priority.copy()
         
-        # --- 🎉 ฟีเจอร์ใหม่: ยิงลูกโป่งฉลองเมื่อสุ่มเสร็จ ---
         st.balloons()
 
-    # แสดงผล แบดมินตัน
     if st.session_state.current_matches:
         st.markdown("---")
         st.subheader(f"🔥 ผลการจัดทีมรอบที่ {st.session_state.round_num}")
         
-        summary_lines = [f"🏸 จัดทีมแบดมินตัน รอบที่ {st.session_state.round_num}"]
-        for m in st.session_state.current_matches:
-            t1_str = " & ".join(m["team1"])
-            t2_str = " & ".join(m["team2"])
-            summary_lines.append(f"📍 คอร์ด {m['court']}: [{t1_str}] VS [{t2_str}]")
-        
-        waiting_teams, leftover = st.session_state.waiting_data
-        if waiting_teams or leftover:
-            summary_lines.append("🌟 ทีมรอรอบถัดไป:")
-            for i, t in enumerate(waiting_teams): summary_lines.append(f"- รอที่ {i+1}: {' & '.join(t)}")
-            if leftover: summary_lines.append(f"- เศษคนรอ: {', '.join(leftover)}")
-        
-        st.caption("👇 กดปุ่มคัดลอกมุมขวาบนเพื่อส่ง LINE")
-        st.code("\n".join(summary_lines), language="text")
-        
         with st.form("score_form"):
             results = {}
+            # 1. แสดงผลกล่องทีมหลัก
             for match in st.session_state.current_matches:
                 t1 = " & ".join(match["team1"])
                 t2 = " & ".join(match["team2"])
@@ -214,6 +192,31 @@ with tab1:
                 )
                 st.markdown("---")
             
+            # 2. แสดงผลกล่องทีมรอและคนเศษให้ชัดเจน
+            waiting_teams, leftover = st.session_state.waiting_data
+            if waiting_teams or leftover:
+                st.markdown("#### 🌟 ทีมรอรอบถัดไป (VIP การันตีลงสนาม)")
+                w_cols = st.columns(2)
+                for i, t in enumerate(waiting_teams):
+                    with w_cols[i % 2]:
+                        st.warning(f"⏳ **ทีมรอที่ {i+1}:**\n\n{' & '.join(t)}")
+                if leftover:
+                    st.error(f"👤 **เศษคนรอจับคู่:**\n\n{', '.join(leftover)}")
+                st.markdown("---")
+            
+            # 3. กล่องก๊อปปี้ข้อความ ย้ายมาไว้ด้านล่างสุดของผลลัพธ์
+            summary_lines = [f"🏸 จัดทีมแบดมินตัน รอบที่ {st.session_state.round_num}"]
+            for m in st.session_state.current_matches:
+                summary_lines.append(f"📍 คอร์ด {m['court']}: [{' & '.join(m['team1'])}] VS [{' & '.join(m['team2'])}]")
+            if waiting_teams or leftover:
+                summary_lines.append("🌟 ทีมรอรอบถัดไป:")
+                for i, t in enumerate(waiting_teams): summary_lines.append(f"- รอที่ {i+1}: {' & '.join(t)}")
+                if leftover: summary_lines.append(f"- เศษคนรอ: {', '.join(leftover)}")
+                
+            st.caption("👇 คัดลอกข้อความสรุปผลเพื่อส่ง LINE")
+            st.code("\n".join(summary_lines), language="text")
+            
+            # 4. ปุ่มกดยืนยันคะแนน
             if st.form_submit_button("บันทึกคะแนนและไปรอบต่อไป ✅", use_container_width=True):
                 for match in st.session_state.current_matches:
                     res = results[match['court']]
@@ -272,18 +275,11 @@ with tab2:
                 car_passengers = [passengers_list.pop(0) for _ in range(int(car["capacity"])) if passengers_list]
                 results.append({"car_num": car["car_num"], "driver": car["driver"], "passengers": car_passengers})
                 
-        st.snow() # ฉลองด้วยหิมะตก
+        st.snow()
         st.markdown("---")
         st.subheader("🏁 ผลการจัดคนขึ้นรถ")
         
-        car_lines = ["🚗 สรุปการจัดคนขึ้นรถ"]
-        for res in results:
-            d_name = res['driver'] if res['driver'] != "- ยังไม่ระบุ -" else "ไม่มี"
-            p_names = ', '.join(res['passengers']) if res['passengers'] else '(ไม่มี)'
-            car_lines.append(f"🚙 รถคันที่ {res['car_num']} | คนขับ: {d_name} | ผดส: {p_names}")
-        st.caption("👇 คัดลอกข้อความส่ง LINE")
-        st.code("\n".join(car_lines), language="text")
-        
+        # แสดงผลกล่องสี
         cols = st.columns(2)
         colors = [st.info, st.success, st.warning, st.error]
         for i, res in enumerate(results):
@@ -294,6 +290,16 @@ with tab2:
             
         if passengers_list:
             st.error(f"⚠️ **ตกหล่น {len(passengers_list)} คน:** {', '.join(passengers_list)}")
+            
+        # ก๊อปปี้ข้อความย้ายมาด้านล่าง
+        st.markdown("---")
+        car_lines = ["🚗 สรุปการจัดคนขึ้นรถ"]
+        for res in results:
+            d_name = res['driver'] if res['driver'] != "- ยังไม่ระบุ -" else "ไม่มี"
+            p_names = ', '.join(res['passengers']) if res['passengers'] else '(ไม่มี)'
+            car_lines.append(f"🚙 รถคันที่ {res['car_num']} | คนขับ: {d_name} | ผดส: {p_names}")
+        st.caption("👇 คัดลอกข้อความส่ง LINE")
+        st.code("\n".join(car_lines), language="text")
 
 # ==========================================
 # TAB 3: ระบบจัดทีมฟุตบอล
@@ -324,15 +330,7 @@ with tab3:
         st.markdown("---")
         st.subheader("🏁 ผลการจัดทีมฟุตบอล")
         
-        fb_lines = ["⚽ สรุปทีมฟุตบอล"]
-        for i, team in enumerate(fb_teams):
-            b_stat = "🎽 (เสื้อกั๊ก)" if i in teams_with_bibs else "👕 (สีปกติ)"
-            k_stat = "👟 เขี่ยก่อน" if i == team_kickoff else ""
-            t_names = ", ".join(team) if team else "(ไม่มีผู้เล่น)"
-            fb_lines.append(f"ทีมที่ {i+1} {b_stat} {k_stat}\nรายชื่อ: {t_names}")
-        st.caption("👇 คัดลอกข้อความส่ง LINE")
-        st.code("\n\n".join(fb_lines), language="text")
-        
+        # แสดงผลกล่องสี
         cols = st.columns(2)
         colors = [st.info, st.error, st.success, st.warning]
         for i, team in enumerate(fb_teams):
@@ -343,6 +341,17 @@ with tab3:
                 colors[i % 4](f"#### ⚽ ทีมที่ {i+1}\n\n{bib_status} | {kickoff_status}\n\n🏃‍♂️ **รายชื่อ:** {team_names}")
                 
         if fb_players: st.warning(f"🏃 **ตัวสำรอง / รอลงสนาม:** {', '.join(fb_players)}")
+        
+        # ก๊อปปี้ข้อความย้ายมาด้านล่าง
+        st.markdown("---")
+        fb_lines = ["⚽ สรุปทีมฟุตบอล"]
+        for i, team in enumerate(fb_teams):
+            b_stat = "🎽 (เสื้อกั๊ก)" if i in teams_with_bibs else "👕 (สีปกติ)"
+            k_stat = "👟 เขี่ยก่อน" if i == team_kickoff else ""
+            t_names = ", ".join(team) if team else "(ไม่มีผู้เล่น)"
+            fb_lines.append(f"ทีมที่ {i+1} {b_stat} {k_stat}\nรายชื่อ: {t_names}")
+        st.caption("👇 คัดลอกข้อความส่ง LINE")
+        st.code("\n\n".join(fb_lines), language="text")
 
 # ==========================================
 # TAB 4: ระบบสุ่มทำงานกลุ่ม
@@ -375,13 +384,7 @@ with tab4:
         st.markdown("---")
         st.subheader("📚 สรุปรายชื่อกลุ่มทำงาน")
         
-        grp_lines = ["📚 สรุปกลุ่มทำงาน"]
-        for i, grp in enumerate(groups):
-            g_names = ", ".join(grp) if grp else "(ไม่มีสมาชิก)"
-            grp_lines.append(f"กลุ่มที่ {i+1}: {g_names}")
-        st.caption("👇 คัดลอกข้อความส่ง LINE")
-        st.code("\n".join(grp_lines), language="text")
-        
+        # แสดงผลกล่องสี
         cols = st.columns(2)
         colors = [st.success, st.warning, st.info, st.error]
         for i, grp in enumerate(groups):
@@ -390,3 +393,12 @@ with tab4:
                 colors[i % 4](f"**📝 กลุ่มที่ {i+1}** (ต้องการ {group_sizes[i]} ได้ {len(grp)})\n\n👥 **สมาชิก:** {grp_names}")
                 
         if grp_players: st.error(f"👤 **คนที่เหลือ (ไม่มีกลุ่ม):** {', '.join(grp_players)}")
+        
+        # ก๊อปปี้ข้อความย้ายมาด้านล่าง
+        st.markdown("---")
+        grp_lines = ["📚 สรุปกลุ่มทำงาน"]
+        for i, grp in enumerate(groups):
+            g_names = ", ".join(grp) if grp else "(ไม่มีสมาชิก)"
+            grp_lines.append(f"กลุ่มที่ {i+1}: {g_names}")
+        st.caption("👇 คัดลอกข้อความส่ง LINE")
+        st.code("\n".join(grp_lines), language="text")
