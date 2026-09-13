@@ -120,7 +120,7 @@ if 'pair_hist' not in st.session_state: st.session_state.pair_hist = {}
 if 'priority_players' not in st.session_state: st.session_state.priority_players = []
 if 'round_num' not in st.session_state: st.session_state.round_num = 1
 if 'current_matches' not in st.session_state: st.session_state.current_matches = []
-if 'custom_matches' not in st.session_state: st.session_state.custom_matches = [] # แยกตัวแปรเก็บแมตช์เลือกเองโดยเฉพาะ
+if 'custom_matches' not in st.session_state: st.session_state.custom_matches = [] 
 if 'waiting_data' not in st.session_state: st.session_state.waiting_data = ({}, [])
 if 'show_history' not in st.session_state: st.session_state.show_history = False 
 
@@ -216,9 +216,9 @@ else:
         
         col1, col2 = st.columns(2)
         with col1: num_courts = st.number_input("จำนวนคอร์ด", min_value=1, max_value=10, value=2)
-        with col2: play_type = play_type = st.radio("ประเภทการเล่น", ["ตีคู่ (ทีมละ 2 คน)", "ตีเดี่ยว (ทีมละ 1 คน)"])
+        with col2: play_type = st.radio("ประเภทการเล่น", ["ตีคู่ (ทีมละ 2 คน)", "ตีเดี่ยว (ทีมละ 1 คน)"])
         
-        # --- ฟีเจอร์: เพิ่มคู่การแข่งขันเอง (แยกโซนต่างหาก ไม่ปะปนกับการสุ่มหลัก) ---
+        # --- ฟีเจอร์: เพิ่มคู่การแข่งขันเอง ---
         with st.expander("➕ เพิ่มคู่การแข่งขันเอง (กำหนดคู่และคอร์ดพิเศษ)"):
             c_input_1, c_input_2 = st.columns(2)
             with c_input_1:
@@ -252,7 +252,6 @@ else:
                         st.warning("⚠️ กรุณาเลือกรายชื่อผู้เล่นให้ครบถ้วน")
                     else:
                         new_custom = {"court": int(target_court), "team1": team1_custom, "team2": team2_custom}
-                        # แทนที่คอร์ดเดิมถ้าเคยสร้างไว้
                         st.session_state.custom_matches = [m for m in st.session_state.custom_matches if m["court"] != int(target_court)]
                         st.session_state.custom_matches.append(new_custom)
                         st.session_state.custom_matches = sorted(st.session_state.custom_matches, key=lambda x: x["court"])
@@ -265,7 +264,6 @@ else:
                     st.success("🗑️ ล้างคู่พิเศษเรียบร้อย!")
                     time.sleep(0.6)
                     st.rerun()
-        # --------------------------------------------------
             
         if st.button("🔄 ล้างสถิติและประวัติการจับคู่", key="reset_badminton"):
             st.session_state.player_stats = {}
@@ -349,7 +347,7 @@ else:
             add_to_history("แบดมินตัน", f"🏸 แบดมินตัน (รอบที่ {st.session_state.round_num})", "\n".join(summary_lines))
 
         # ==========================================
-        # โซนที่ 1: ผลการจัดทีมจากการสุ่ม (ระบบหลัก)
+        # โซนที่ 1: ผลการจัดทีมสุ่ม
         # ==========================================
         if st.session_state.current_matches:
             st.markdown("---")
@@ -379,7 +377,7 @@ else:
                 if waiting_teams or leftover:
                     summary_lines.append("🌟 ทีมรอรอบถัดไป:")
                     for i, t in enumerate(waiting_teams): summary_lines.append(f"- รอที่ {i+1}: {' & '.join(t)}")
-                    if leftover: summary_lines.append(f"- เศษคนรอ: {', '.join(leftover)}")
+                    if leftover: summary_lines.append(f"- เศษคนรอ: {', '.join(temp_wait)}")
                     
                 st.caption("👇 คัดลอกข้อความสรุปผลเพื่อส่ง LINE")
                 st.code("\n".join(summary_lines), language="text")
@@ -403,7 +401,7 @@ else:
                     st.rerun()
 
         # ==========================================
-        # โซนที่ 2: ผลการแข่งขันคู่พิเศษ (เลือกเอง)
+        # โซนที่ 2: ผลการแข่งขันคู่พิเศษ
         # ==========================================
         if st.session_state.custom_matches:
             st.markdown("---")
@@ -540,6 +538,6 @@ else:
                 with cols[i % 2]: colors[i % 4](f"**📝 กลุ่มที่ {i+1}** (ต้องการ {group_sizes[i]} ได้ {len(grp)})\n\n👥 **สมาชิก:** {', '.join(grp) if grp else '*(ไม่มีสมาชิก)*'}")
             if grp_players: st.error(f"👤 **คนที่เหลือ (ไม่มีกลุ่ม):** {', '.join(grp_players)}")
             
-            st.markdown---
+            st.markdown("---")
             st.caption("👇 คัดลอกข้อความส่ง LINE")
             st.code("\n".join(grp_lines), language="text")
