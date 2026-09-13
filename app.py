@@ -3,7 +3,7 @@ import random
 import re
 import time
 from datetime import datetime
-import pytz # สำหรับตั้งค่าเวลาประเทศไทย
+import pytz
 
 # --- ตั้งค่าหน้าเว็บ (Hiso Random) ---
 st.set_page_config(page_title="Hiso Random", page_icon="🎲", layout="centered")
@@ -38,13 +38,16 @@ def show_tarot_animation():
         <div class="tarot-card-{uid}" style="left: 95%; animation-duration: 2.9s; animation-delay: 0.1s;">🃏</div>
     """, unsafe_allow_html=True)
 
-# --- ฟังก์ชันบันทึกประวัติ ---
-def add_to_history(title, detail_text):
-    # ใช้เวลาประเทศไทย (UTC+7)
+# --- ฟังก์ชันบันทึกประวัติ (เพิ่มหมวดหมู่) ---
+def add_to_history(category, title, detail_text):
     tz = pytz.timezone('Asia/Bangkok')
     current_time = datetime.now(tz).strftime("%H:%M:%S")
-    # นำประวัติใหม่แทรกไว้บนสุด (index 0)
-    st.session_state.history_log.insert(0, {"time": current_time, "title": title, "detail": detail_text})
+    st.session_state.history_log.insert(0, {
+        "category": category, 
+        "time": current_time, 
+        "title": title, 
+        "detail": detail_text
+    })
 
 # --- โหลดฟอนต์ Kanit และปรับแต่ง UI ---
 st.markdown("""
@@ -89,7 +92,7 @@ if 'priority_players' not in st.session_state: st.session_state.priority_players
 if 'round_num' not in st.session_state: st.session_state.round_num = 1
 if 'current_matches' not in st.session_state: st.session_state.current_matches = []
 if 'waiting_data' not in st.session_state: st.session_state.waiting_data = ({}, [])
-if 'history_log' not in st.session_state: st.session_state.history_log = [] # ตัวแปรเก็บประวัติ
+if 'history_log' not in st.session_state: st.session_state.history_log = []
 
 st.title("🎲 Hiso Random")
 
@@ -109,8 +112,8 @@ st.metric("👥 สมาชิกทั้งหมด", f"{len(player_list)} �
 
 st.markdown("---")
 
-# --- สร้าง Tabs (เพิ่ม Tab ประวัติ) ---
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏸 แบดมินตัน", "🚗 สุ่มขึ้นรถ", "⚽ ฟุตบอล", "📚 ทำงานกลุ่ม", "📜 ประวัติย้อนหลัง"])
+# --- สร้าง Tabs ---
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏸 แบดมินตัน", "🚗 สุ่มขึ้นรถ", "⚽ ฟุตบอล", "📚 ทำงานกลุ่ม", "📜 ประวัติ"])
 
 # ==========================================
 # TAB 1: ระบบจัดทีมแบดมินตัน
@@ -214,7 +217,7 @@ with tab1:
         st.session_state.waiting_data = (waiting_teams, temp_wait)
         st.session_state.priority_players = new_priority.copy()
         
-        # บันทึกประวัติ
+        # บันทึกประวัติพร้อมแนบหมวดหมู่
         summary_lines = [f"🏸 จัดทีมแบดมินตัน รอบที่ {st.session_state.round_num}"]
         for m in matches:
             summary_lines.append(f"📍 คอร์ด {m['court']}: [{' & '.join(m['team1'])}] VS [{' & '.join(m['team2'])}]")
@@ -223,7 +226,7 @@ with tab1:
             for i, t in enumerate(waiting_teams): summary_lines.append(f"- รอที่ {i+1}: {' & '.join(t)}")
             if temp_wait: summary_lines.append(f"- เศษคนรอ: {', '.join(temp_wait)}")
         
-        add_to_history(f"🏸 แบดมินตัน (รอบที่ {st.session_state.round_num})", "\n".join(summary_lines))
+        add_to_history("แบดมินตัน", f"🏸 แบดมินตัน (รอบที่ {st.session_state.round_num})", "\n".join(summary_lines))
 
     if st.session_state.current_matches:
         st.markdown("---")
@@ -337,7 +340,7 @@ with tab2:
             d_name = res['driver'] if res['driver'] != "- ยังไม่ระบุ -" else "ไม่มี"
             p_names = ', '.join(res['passengers']) if res['passengers'] else '(ไม่มี)'
             car_lines.append(f"🚙 รถคันที่ {res['car_num']} | คนขับ: {d_name} | ผดส: {p_names}")
-        add_to_history("🚗 จัดคนขึ้นรถ", "\n".join(car_lines))
+        add_to_history("จัดคนขึ้นรถ", "🚗 ผลสุ่มขบวนรถ", "\n".join(car_lines))
             
         st.markdown("---")
         st.subheader("🏁 ผลการจัดคนขึ้นรถ")
@@ -393,7 +396,7 @@ with tab3:
             k_stat = "👟 เขี่ยก่อน" if i == team_kickoff else ""
             t_names = ", ".join(team) if team else "(ไม่มีผู้เล่น)"
             fb_lines.append(f"ทีมที่ {i+1} {b_stat} {k_stat}\nรายชื่อ: {t_names}")
-        add_to_history("⚽ ทีมฟุตบอล", "\n\n".join(fb_lines))
+        add_to_history("ทีมฟุตบอล", "⚽ ผลจัดทีมฟุตบอล", "\n\n".join(fb_lines))
             
         st.markdown("---")
         st.subheader("🏁 ผลการจัดทีมฟุตบอล")
@@ -449,7 +452,7 @@ with tab4:
         for i, grp in enumerate(groups):
             g_names = ", ".join(grp) if grp else "(ไม่มีสมาชิก)"
             grp_lines.append(f"กลุ่มที่ {i+1}: {g_names}")
-        add_to_history("📚 ทำงานกลุ่ม", "\n".join(grp_lines))
+        add_to_history("ทำงานกลุ่ม", "📚 ผลสุ่มกลุ่มทำงาน", "\n".join(grp_lines))
         
         st.markdown("---")
         st.subheader("📚 สรุปรายชื่อกลุ่มทำงาน")
@@ -468,11 +471,18 @@ with tab4:
         st.code("\n".join(grp_lines), language="text")
 
 # ==========================================
-# TAB 5: 📜 ประวัติย้อนหลัง (History)
+# TAB 5: 📜 ประวัติย้อนหลัง (History) - เพิ่มระบบ Filter หมวดหมู่
 # ==========================================
 with tab5:
     st.subheader("📜 ประวัติการสุ่มทั้งหมด")
-    st.write("ระบบจะบันทึกผลการสุ่มทุกครั้งที่คุณกดปุ่ม (เรียงจากใหม่สุดไปเก่าสุด)")
+    st.write("เลือกดูประวัติตามหมวดหมู่ที่ต้องการ")
+    
+    # --- ปุ่มตัวกรองหมวดหมู่ ---
+    filter_category = st.radio(
+        "กรองหมวดหมู่:", 
+        ["ทั้งหมด", "แบดมินตัน", "จัดคนขึ้นรถ", "ทีมฟุตบอล", "ทำงานกลุ่ม"], 
+        horizontal=True
+    )
     
     if st.button("🗑️ ล้างประวัติทั้งหมด"):
         st.session_state.history_log = []
@@ -483,7 +493,14 @@ with tab5:
     if not st.session_state.history_log:
         st.info("ยังไม่มีประวัติการสุ่มในขณะนี้")
     else:
-        for idx, log in enumerate(st.session_state.history_log):
-            # สร้างกล่องซ่อนรายละเอียดได้ (Expander)
-            with st.expander(f"🕒 {log['time']} | {log['title']}", expanded=(idx==0)):
-                st.code(log['detail'], language="text")
+        # ระบบคัดกรอง: ถ้าเลือก "ทั้งหมด" ให้ดึงมาหมด ถ้าเลือกหมวดอื่น ให้เทียบหมวด
+        filtered_log = st.session_state.history_log if filter_category == "ทั้งหมด" else [
+            log for log in st.session_state.history_log if log.get('category') == filter_category
+        ]
+        
+        if not filtered_log:
+            st.info(f"ยังไม่มีประวัติในหมวดหมู่ '{filter_category}'")
+        else:
+            for idx, log in enumerate(filtered_log):
+                with st.expander(f"🕒 {log['time']} | {log['title']}", expanded=(idx==0)):
+                    st.code(log['detail'], language="text")
