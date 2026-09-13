@@ -2,13 +2,15 @@ import streamlit as st
 import random
 import re
 import time
+from datetime import datetime
+import pytz # สำหรับตั้งค่าเวลาประเทศไทย
 
 # --- ตั้งค่าหน้าเว็บ (Hiso Random) ---
 st.set_page_config(page_title="Hiso Random", page_icon="🎲", layout="centered")
 
-# --- ฟังก์ชันแอนิเมชันไพ่ทาโรต์ (อัปเกรดให้แสดงผลทุกครั้งที่กด) ---
+# --- ฟังก์ชันแอนิเมชันไพ่ทาโรต์ ---
 def show_tarot_animation():
-    uid = random.randint(10000, 99999) # สุ่ม ID ใหม่ทุกรอบเพื่อให้แอนิเมชันเล่นซ้ำ
+    uid = random.randint(10000, 99999)
     st.markdown(f"""
         <style>
             @keyframes tarotFall_{uid} {{
@@ -35,6 +37,14 @@ def show_tarot_animation():
         <div class="tarot-card-{uid}" style="left: 85%; animation-duration: 2.4s; animation-delay: 0.5s;">🎴</div>
         <div class="tarot-card-{uid}" style="left: 95%; animation-duration: 2.9s; animation-delay: 0.1s;">🃏</div>
     """, unsafe_allow_html=True)
+
+# --- ฟังก์ชันบันทึกประวัติ ---
+def add_to_history(title, detail_text):
+    # ใช้เวลาประเทศไทย (UTC+7)
+    tz = pytz.timezone('Asia/Bangkok')
+    current_time = datetime.now(tz).strftime("%H:%M:%S")
+    # นำประวัติใหม่แทรกไว้บนสุด (index 0)
+    st.session_state.history_log.insert(0, {"time": current_time, "title": title, "detail": detail_text})
 
 # --- โหลดฟอนต์ Kanit และปรับแต่ง UI ---
 st.markdown("""
@@ -79,6 +89,7 @@ if 'priority_players' not in st.session_state: st.session_state.priority_players
 if 'round_num' not in st.session_state: st.session_state.round_num = 1
 if 'current_matches' not in st.session_state: st.session_state.current_matches = []
 if 'waiting_data' not in st.session_state: st.session_state.waiting_data = ({}, [])
+if 'history_log' not in st.session_state: st.session_state.history_log = [] # ตัวแปรเก็บประวัติ
 
 st.title("🎲 Hiso Random")
 
@@ -98,8 +109,8 @@ st.metric("👥 สมาชิกทั้งหมด", f"{len(player_list)} �
 
 st.markdown("---")
 
-# --- สร้าง Tabs ---
-tab1, tab2, tab3, tab4 = st.tabs(["🏸 แบดมินตัน", "🚗 สุ่มขึ้นรถ", "⚽ ฟุตบอล", "📚 ทำงานกลุ่ม"])
+# --- สร้าง Tabs (เพิ่ม Tab ประวัติ) ---
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏸 แบดมินตัน", "🚗 สุ่มขึ้นรถ", "⚽ ฟุตบอล", "📚 ทำงานกลุ่ม", "📜 ประวัติย้อนหลัง"])
 
 # ==========================================
 # TAB 1: ระบบจัดทีมแบดมินตัน
@@ -141,16 +152,12 @@ with tab1:
     players_per_team = 2 if "ตีคู่" in play_type else 1
 
     if st.button(f"🎲 สุ่มจัดทีมรอบที่ {st.session_state.round_num}", type="primary", use_container_width=True):
-        # 1. แสดงแอนิเมชันไพ่ก่อน
         show_tarot_animation()
-        
-        # 2. หน่วงเวลา 1.5 วินาทีให้รอลุ้น (ไม่ให้มีข้อความโหลด)
         ph = st.empty()
         ph.write("") 
         time.sleep(1.5)
         ph.empty()
         
-        # 3. คำนวณผลลัพธ์
         slots_needed = int(num_courts) * players_per_team * 2
         priority_players = [p for p in st.session_state.priority_players if p in player_list]
         regular_players = [p for p in player_list if p not in priority_players]
@@ -206,6 +213,17 @@ with tab1:
         st.session_state.current_matches = matches
         st.session_state.waiting_data = (waiting_teams, temp_wait)
         st.session_state.priority_players = new_priority.copy()
+        
+        # บันทึกประวัติ
+        summary_lines = [f"🏸 จัดทีมแบดมินตัน รอบที่ {st.session_state.round_num}"]
+        for m in matches:
+            summary_lines.append(f"📍 คอร์ด {m['court']}: [{' & '.join(m['team1'])}] VS [{' & '.join(m['team2'])}]")
+        if waiting_teams or temp_wait:
+            summary_lines.append("🌟 ทีมรอรอบถัดไป:")
+            for i, t in enumerate(waiting_teams): summary_lines.append(f"- รอที่ {i+1}: {' & '.join(t)}")
+            if temp_wait: summary_lines.append(f"- เศษคนรอ: {', '.join(temp_wait)}")
+        
+        add_to_history(f"🏸 แบดมินตัน (รอบที่ {st.session_state.round_num})", "\n".join(summary_lines))
 
     if st.session_state.current_matches:
         st.markdown("---")
@@ -313,6 +331,14 @@ with tab2:
             car_passengers = [passengers_list.pop(0) for _ in range(int(car["capacity"])) if passengers_list]
             results.append({"car_num": car["car_num"], "driver": car["driver"], "passengers": car_passengers})
             
+        # บันทึกประวัติ
+        car_lines = ["🚗 สรุปการจัดคนขึ้นรถ"]
+        for res in results:
+            d_name = res['driver'] if res['driver'] != "- ยังไม่ระบุ -" else "ไม่มี"
+            p_names = ', '.join(res['passengers']) if res['passengers'] else '(ไม่มี)'
+            car_lines.append(f"🚙 รถคันที่ {res['car_num']} | คนขับ: {d_name} | ผดส: {p_names}")
+        add_to_history("🚗 จัดคนขึ้นรถ", "\n".join(car_lines))
+            
         st.markdown("---")
         st.subheader("🏁 ผลการจัดคนขึ้นรถ")
         
@@ -328,11 +354,6 @@ with tab2:
             st.error(f"⚠️ **ตกหล่น {len(passengers_list)} คน:** {', '.join(passengers_list)}")
             
         st.markdown("---")
-        car_lines = ["🚗 สรุปการจัดคนขึ้นรถ"]
-        for res in results:
-            d_name = res['driver'] if res['driver'] != "- ยังไม่ระบุ -" else "ไม่มี"
-            p_names = ', '.join(res['passengers']) if res['passengers'] else '(ไม่มี)'
-            car_lines.append(f"🚙 รถคันที่ {res['car_num']} | คนขับ: {d_name} | ผดส: {p_names}")
         st.caption("👇 คัดลอกข้อความส่ง LINE")
         st.code("\n".join(car_lines), language="text")
 
@@ -364,6 +385,15 @@ with tab3:
         num_bibs = max(1, len(fb_teams) // 2)
         teams_with_bibs = random.sample(team_indices, k=num_bibs)
         team_kickoff = random.choice(team_indices)
+        
+        # บันทึกประวัติ
+        fb_lines = ["⚽ สรุปทีมฟุตบอล"]
+        for i, team in enumerate(fb_teams):
+            b_stat = "🎽 (เสื้อกั๊ก)" if i in teams_with_bibs else "👕 (สีปกติ)"
+            k_stat = "👟 เขี่ยก่อน" if i == team_kickoff else ""
+            t_names = ", ".join(team) if team else "(ไม่มีผู้เล่น)"
+            fb_lines.append(f"ทีมที่ {i+1} {b_stat} {k_stat}\nรายชื่อ: {t_names}")
+        add_to_history("⚽ ทีมฟุตบอล", "\n\n".join(fb_lines))
             
         st.markdown("---")
         st.subheader("🏁 ผลการจัดทีมฟุตบอล")
@@ -380,12 +410,6 @@ with tab3:
         if fb_players: st.warning(f"🏃 **ตัวสำรอง / รอลงสนาม:** {', '.join(fb_players)}")
         
         st.markdown("---")
-        fb_lines = ["⚽ สรุปทีมฟุตบอล"]
-        for i, team in enumerate(fb_teams):
-            b_stat = "🎽 (เสื้อกั๊ก)" if i in teams_with_bibs else "👕 (สีปกติ)"
-            k_stat = "👟 เขี่ยก่อน" if i == team_kickoff else ""
-            t_names = ", ".join(team) if team else "(ไม่มีผู้เล่น)"
-            fb_lines.append(f"ทีมที่ {i+1} {b_stat} {k_stat}\nรายชื่อ: {t_names}")
         st.caption("👇 คัดลอกข้อความส่ง LINE")
         st.code("\n\n".join(fb_lines), language="text")
 
@@ -419,6 +443,13 @@ with tab4:
         for i, target_size in enumerate(group_sizes):
             grp = [grp_players.pop(0) for _ in range(target_size) if grp_players]
             groups.append(grp)
+            
+        # บันทึกประวัติ
+        grp_lines = ["📚 สรุปกลุ่มทำงาน"]
+        for i, grp in enumerate(groups):
+            g_names = ", ".join(grp) if grp else "(ไม่มีสมาชิก)"
+            grp_lines.append(f"กลุ่มที่ {i+1}: {g_names}")
+        add_to_history("📚 ทำงานกลุ่ม", "\n".join(grp_lines))
         
         st.markdown("---")
         st.subheader("📚 สรุปรายชื่อกลุ่มทำงาน")
@@ -433,9 +464,26 @@ with tab4:
         if grp_players: st.error(f"👤 **คนที่เหลือ (ไม่มีกลุ่ม):** {', '.join(grp_players)}")
         
         st.markdown("---")
-        grp_lines = ["📚 สรุปกลุ่มทำงาน"]
-        for i, grp in enumerate(groups):
-            g_names = ", ".join(grp) if grp else "(ไม่มีสมาชิก)"
-            grp_lines.append(f"กลุ่มที่ {i+1}: {g_names}")
         st.caption("👇 คัดลอกข้อความส่ง LINE")
         st.code("\n".join(grp_lines), language="text")
+
+# ==========================================
+# TAB 5: 📜 ประวัติย้อนหลัง (History)
+# ==========================================
+with tab5:
+    st.subheader("📜 ประวัติการสุ่มทั้งหมด")
+    st.write("ระบบจะบันทึกผลการสุ่มทุกครั้งที่คุณกดปุ่ม (เรียงจากใหม่สุดไปเก่าสุด)")
+    
+    if st.button("🗑️ ล้างประวัติทั้งหมด"):
+        st.session_state.history_log = []
+        st.success("ล้างประวัติเรียบร้อยแล้ว!")
+        time.sleep(0.5)
+        st.rerun()
+        
+    if not st.session_state.history_log:
+        st.info("ยังไม่มีประวัติการสุ่มในขณะนี้")
+    else:
+        for idx, log in enumerate(st.session_state.history_log):
+            # สร้างกล่องซ่อนรายละเอียดได้ (Expander)
+            with st.expander(f"🕒 {log['time']} | {log['title']}", expanded=(idx==0)):
+                st.code(log['detail'], language="text")
