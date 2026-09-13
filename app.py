@@ -63,17 +63,8 @@ for p in player_list:
     if p not in st.session_state.pair_hist:
         st.session_state.pair_hist[p] = {}
 
-# --- 📊 Dashboard Metrics ---
-wins = [s['wins'] for s in st.session_state.player_stats.values()] if st.session_state.player_stats else [0]
-max_wins = max(wins) if wins else 0
-mvps = [p for p, s in st.session_state.player_stats.items() if s['wins'] == max_wins and max_wins > 0]
-mvp_text = ", ".join(mvps) if mvps else "-"
-waiting_count = len(st.session_state.waiting_data[1]) if len(st.session_state.waiting_data) > 1 else 0
-
-m1, m2, m3 = st.columns(3)
-m1.metric("👥 สมาชิกทั้งหมด", f"{len(player_list)} คน")
-m2.metric("🏆 ผู้นำ MVP ตอนนี้", mvp_text)
-m3.metric("🪑 รอคิวตีแบด (คนเศษ)", f"{waiting_count} คน")
+# --- 📊 Dashboard Metrics (แสดงเฉพาะจำนวนคนทั้งหมด) ---
+st.metric("👥 สมาชิกทั้งหมด", f"{len(player_list)} คน")
 
 st.markdown("---")
 
@@ -85,6 +76,18 @@ tab1, tab2, tab3, tab4 = st.tabs(["🏸 แบดมินตัน", "🚗 ส�
 # ==========================================
 with tab1:
     st.subheader("🏸 สุ่มทีมแบดมินตัน")
+    
+    # ย้าย MVP และคนรอ มาแสดงเฉพาะในหน้านี้
+    wins = [s['wins'] for s in st.session_state.player_stats.values()] if st.session_state.player_stats else [0]
+    max_wins = max(wins) if wins else 0
+    mvps = [p for p, s in st.session_state.player_stats.items() if s['wins'] == max_wins and max_wins > 0]
+    mvp_text = ", ".join(mvps) if mvps else "-"
+    waiting_count = len(st.session_state.waiting_data[1]) if len(st.session_state.waiting_data) > 1 else 0
+
+    m1, m2 = st.columns(2)
+    m1.metric("🏆 ผู้นำ MVP ตอนนี้", mvp_text)
+    m2.metric("🪑 รอคิวตีแบด (คนเศษ)", f"{waiting_count} คน")
+    st.write("") # เว้นบรรทัดนิดนึงให้ดูสบายตา
     
     col1, col2 = st.columns(2)
     with col1:
@@ -109,7 +112,7 @@ with tab1:
     players_per_team = 2 if "ตีคู่" in play_type else 1
 
     if st.button(f"🎲 สุ่มจัดทีมรอบที่ {st.session_state.round_num}", type="primary", use_container_width=True):
-        with st.spinner('กำลังสับไพ่รายชื่อ และสุ่มจับคู่... 🎲'):
+        with st.spinner('กำลังสับไพ่ทาโรต์... 🃏'):
             time.sleep(1)
             slots_needed = int(num_courts) * players_per_team * 2
             priority_players = [p for p in st.session_state.priority_players if p in player_list]
@@ -175,7 +178,6 @@ with tab1:
         
         with st.form("score_form"):
             results = {}
-            # 1. แสดงผลกล่องทีมหลัก
             for match in st.session_state.current_matches:
                 t1 = " & ".join(match["team1"])
                 t2 = " & ".join(match["team2"])
@@ -192,7 +194,6 @@ with tab1:
                 )
                 st.markdown("---")
             
-            # 2. แสดงผลกล่องทีมรอและคนเศษให้ชัดเจน
             waiting_teams, leftover = st.session_state.waiting_data
             if waiting_teams or leftover:
                 st.markdown("#### 🌟 ทีมรอรอบถัดไป (VIP การันตีลงสนาม)")
@@ -204,7 +205,6 @@ with tab1:
                     st.error(f"👤 **เศษคนรอจับคู่:**\n\n{', '.join(leftover)}")
                 st.markdown("---")
             
-            # 3. กล่องก๊อปปี้ข้อความ ย้ายมาไว้ด้านล่างสุดของผลลัพธ์
             summary_lines = [f"🏸 จัดทีมแบดมินตัน รอบที่ {st.session_state.round_num}"]
             for m in st.session_state.current_matches:
                 summary_lines.append(f"📍 คอร์ด {m['court']}: [{' & '.join(m['team1'])}] VS [{' & '.join(m['team2'])}]")
@@ -216,7 +216,6 @@ with tab1:
             st.caption("👇 คัดลอกข้อความสรุปผลเพื่อส่ง LINE")
             st.code("\n".join(summary_lines), language="text")
             
-            # 4. ปุ่มกดยืนยันคะแนน
             if st.form_submit_button("บันทึกคะแนนและไปรอบต่อไป ✅", use_container_width=True):
                 for match in st.session_state.current_matches:
                     res = results[match['court']]
@@ -264,7 +263,7 @@ with tab2:
             cars_info.append({"car_num": i+1, "driver": driver, "capacity": capacity})
             
     if st.button("🎲 จัดคนขึ้นรถ", type="primary", use_container_width=True):
-        with st.spinner('กำลังคำนวณที่นั่ง... 🚙'):
+        with st.spinner('กำลังสับไพ่ทาโรต์... 🃏'):
             time.sleep(0.8)
             drivers_list = [c["driver"] for c in cars_info if c["driver"] != "- ยังไม่ระบุ -"]
             passengers_list = [p for p in player_list if p not in drivers_list]
@@ -279,7 +278,6 @@ with tab2:
         st.markdown("---")
         st.subheader("🏁 ผลการจัดคนขึ้นรถ")
         
-        # แสดงผลกล่องสี
         cols = st.columns(2)
         colors = [st.info, st.success, st.warning, st.error]
         for i, res in enumerate(results):
@@ -291,7 +289,6 @@ with tab2:
         if passengers_list:
             st.error(f"⚠️ **ตกหล่น {len(passengers_list)} คน:** {', '.join(passengers_list)}")
             
-        # ก๊อปปี้ข้อความย้ายมาด้านล่าง
         st.markdown("---")
         car_lines = ["🚗 สรุปการจัดคนขึ้นรถ"]
         for res in results:
@@ -311,7 +308,7 @@ with tab3:
     with col2: players_per_fb = st.number_input("ผู้เล่นต่อทีม", min_value=1, max_value=11, value=5)
         
     if st.button("🎲 สุ่มทีมฟุตบอล", type="primary", use_container_width=True):
-        with st.spinner('กำลังจับฉลากเลือกทีม และสุ่มเสื้อกั๊ก... ⚽'):
+        with st.spinner('กำลังสับไพ่ทาโรต์... 🃏'):
             time.sleep(1)
             fb_players = player_list.copy()
             random.shuffle(fb_players)
@@ -330,7 +327,6 @@ with tab3:
         st.markdown("---")
         st.subheader("🏁 ผลการจัดทีมฟุตบอล")
         
-        # แสดงผลกล่องสี
         cols = st.columns(2)
         colors = [st.info, st.error, st.success, st.warning]
         for i, team in enumerate(fb_teams):
@@ -342,7 +338,6 @@ with tab3:
                 
         if fb_players: st.warning(f"🏃 **ตัวสำรอง / รอลงสนาม:** {', '.join(fb_players)}")
         
-        # ก๊อปปี้ข้อความย้ายมาด้านล่าง
         st.markdown("---")
         fb_lines = ["⚽ สรุปทีมฟุตบอล"]
         for i, team in enumerate(fb_teams):
@@ -370,7 +365,7 @@ with tab4:
             group_sizes.append(int(size))
             
     if st.button("🎲 สุ่มกลุ่มทำงาน", type="primary", use_container_width=True):
-        with st.spinner('กำลังสุ่มสมาชิกเข้ากลุ่ม... 📚'):
+        with st.spinner('กำลังสับไพ่ทาโรต์... 🃏'):
             time.sleep(0.8)
             grp_players = player_list.copy()
             random.shuffle(grp_players)
@@ -384,7 +379,6 @@ with tab4:
         st.markdown("---")
         st.subheader("📚 สรุปรายชื่อกลุ่มทำงาน")
         
-        # แสดงผลกล่องสี
         cols = st.columns(2)
         colors = [st.success, st.warning, st.info, st.error]
         for i, grp in enumerate(groups):
@@ -394,7 +388,6 @@ with tab4:
                 
         if grp_players: st.error(f"👤 **คนที่เหลือ (ไม่มีกลุ่ม):** {', '.join(grp_players)}")
         
-        # ก๊อปปี้ข้อความย้ายมาด้านล่าง
         st.markdown("---")
         grp_lines = ["📚 สรุปกลุ่มทำงาน"]
         for i, grp in enumerate(groups):
