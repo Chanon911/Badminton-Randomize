@@ -218,50 +218,46 @@ else:
         with col1: num_courts = st.number_input("จำนวนคอร์ดหลัก", min_value=1, max_value=10, value=2)
         with col2: play_type = st.radio("ประเภทการเล่น", ["ตีคู่ (ทีมละ 2 คน)", "ตีเดี่ยว (ทีมละ 1 คน)"])
         
-        # --- ฟีเจอร์: เพิ่มคู่การแข่งขันเอง (อิสระ ไม่จำกัดคอร์ดหลัก) ---
+        # --- ฟีเจอร์: เพิ่มคู่การแข่งขันเอง (เลือกจำนวนคอร์ดพิเศษที่จะเปิดเล่น) ---
         with st.expander("➕ เพิ่มคู่การแข่งขันเอง (สร้างแมตช์พิเศษระหว่างรอคิว)"):
             c_input_1, c_input_2 = st.columns(2)
             with c_input_1:
-                target_court = st.number_input("ระบุหมายเลขคอร์ดพิเศษ", min_value=1, max_value=99, value=99, key="custom_court_input")
+                num_custom_courts = st.number_input("จำนวนคอร์ดพิเศษที่ต้องการเปิด", min_value=1, max_value=10, value=1, key="num_custom_courts")
             with c_input_2:
                 match_mode = st.radio("รูปแบบการจัดคู่เอง", ["ตีคู่ (2v2)", "ตีเดี่ยว (1v1)"], horizontal=True, key="custom_mode_input")
             
             p_count = 2 if "ตีคู่" in match_mode else 1
-            st.markdown(f"**เลือกรายชื่อผู้เล่นสำหรับคอร์ดพิเศษที่ {target_court}**")
             
-            cc1, cc2 = st.columns(2)
-            with cc1:
-                st.markdown("🔵 **ทีม 1**")
-                team1_custom = []
-                for i in range(p_count):
-                    p_sel = st.selectbox(f"ทีม 1 - คนที่ {i+1}", ["- เลือกผู้เล่น -"] + player_list, key=f"custom_t1_{i}")
-                    if p_sel != "- เลือกผู้เล่น -":
-                        team1_custom.append(p_sel)
-            with cc2:
-                st.markdown("🔴 **ทีม 2**")
-                team2_custom = []
-                for i in range(p_count):
-                    p_sel = st.selectbox(f"ทีม 2 - คนที่ {i+1}", ["- เลือกผู้เล่น -"] + player_list, key=f"custom_t2_{i}")
-                    if p_sel != "- เลือกผู้เล่น -":
-                        team2_custom.append(p_sel)
+            temp_new_customs = []
+            for c_idx in range(int(num_custom_courts)):
+                st.markdown(f"--- \n**🏟️ คอร์ดพิเศษที่ {c_idx + 1}**")
+                cc1, cc2 = st.columns(2)
+                with cc1:
+                    st.markdown("🔵 **ทีม 1**")
+                    t1_list = []
+                    for i in range(p_count):
+                        p_sel = st.selectbox(f"คอร์ด {c_idx+1} | ทีม 1 - คนที่ {i+1}", ["- เลือกผู้เล่น -"] + player_list, key=f"c_{c_idx}_t1_{i}")
+                        if p_sel != "- เลือกผู้เล่น -": t1_list.append(p_sel)
+                with cc2:
+                    st.markdown("🔴 **ทีม 2**")
+                    t2_list = []
+                    for i in range(p_count):
+                        p_sel = st.selectbox(f"คอร์ด {c_idx+1} | ทีม 2 - คนที่ {i+1}", ["- เลือกผู้เล่น -"] + player_list, key=f"c_{c_idx}_t2_{i}")
+                        if p_sel != "- เลือกผู้เล่น -": t2_list.append(p_sel)
+                
+                temp_new_customs.append({"court": c_idx + 1, "team1": t1_list, "team2": t2_list})
                         
             col_b1, col_b2 = st.columns(2)
             with col_b1:
-                if st.button("📌 สร้างคอร์ดพิเศษนี้", use_container_width=True):
-                    if not team1_custom or not team2_custom:
-                        st.warning("⚠️ กรุณาเลือกรายชื่อผู้เล่นให้ครบถ้วน")
-                    else:
-                        new_custom = {"court": int(target_court), "team1": team1_custom, "team2": team2_custom}
-                        st.session_state.custom_matches = [m for m in st.session_state.custom_matches if m["court"] != int(target_court)]
-                        st.session_state.custom_matches.append(new_custom)
-                        st.session_state.custom_matches = sorted(st.session_state.custom_matches, key=lambda x: x["court"])
-                        st.success(f"✅ เปิดคอร์ดพิเศษที่ {target_court} สำเร็จ!")
-                        time.sleep(0.6)
-                        st.rerun()
+                if st.button("📌 บันทึกเปิดคอร์ดพิเศษทั้งหมด", use_container_width=True):
+                    st.session_state.custom_matches = temp_new_customs
+                    st.success("✅ เปิดคอร์ดพิเศษทั้งหมดสำเร็จ!")
+                    time.sleep(0.6)
+                    st.rerun()
             with col_b2:
-                if st.button("🗑️ ล้างคอร์ดพิเศษทั้งหมด", use_container_width=True):
+                if st.button("🗑️ ปิดคอร์ดพิเศษทั้งหมด", use_container_width=True):
                     st.session_state.custom_matches = []
-                    st.success("🗑️ ล้างคอร์ดพิเศษเรียบร้อย!")
+                    st.success("🗑️ ปิดคอร์ดพิเศษทั้งหมดเรียบร้อย!")
                     time.sleep(0.6)
                     st.rerun()
         # --------------------------------------------------
@@ -417,7 +413,6 @@ else:
                     with c2: st.markdown("<div class='vs-text'>VS</div>", unsafe_allow_html=True)
                     with c3: st.error(f"🔴 **คอร์ดพิเศษ {match['court']} | ทีม 2:**\n\n{t2}")
                     
-                    # แยกฟอร์มบันทึกผลใครผลมันทีละคอร์ด
                     with st.form(f"form_custom_{match['court']}"):
                         res_val = st.radio(f"บันทึกผล คอร์ดพิเศษ {match['court']}", ["ไม่คิดคะแนน / เสมอ", "ทีม 1 ชนะ", "ทีม 2 ชนะ"], horizontal=True, key=f"rad_custom_{match['court']}")
                         
