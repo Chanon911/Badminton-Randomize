@@ -82,6 +82,21 @@ def delete_history_item(item_id):
         requests.post(API_URL, json={"action": "delete", "id": item_id})
     except:
         pass
+
+# --- 🔒 ฟังก์ชันหน้าต่าง Pop-up สำหรับกรอกรหัสผ่านลบข้อมูล ---
+@st.dialog("🔒 ยืนยันตัวตนผู้ดูแลระบบ")
+def confirm_delete_dialog(item_id):
+    st.markdown("กรุณากรอกรหัสผ่าน (PIN) เพื่อยืนยันการลบประวัติการสุ่มรายการนี้")
+    pwd = st.text_input("รหัสผ่าน:", type="password", key=f"pwd_{item_id}")
+    
+    if st.button("🗑️ ยืนยันการลบ", type="primary", use_container_width=True):
+        if pwd == "2426":
+            delete_history_item(item_id)
+            st.success("✅ ลบประวัติเรียบร้อยแล้ว!")
+            time.sleep(1)
+            st.rerun()
+        elif pwd:
+            st.error("❌ รหัสผ่านไม่ถูกต้อง!")
 # ==========================================
 
 
@@ -107,9 +122,8 @@ if 'priority_players' not in st.session_state: st.session_state.priority_players
 if 'round_num' not in st.session_state: st.session_state.round_num = 1
 if 'current_matches' not in st.session_state: st.session_state.current_matches = []
 if 'waiting_data' not in st.session_state: st.session_state.waiting_data = ({}, [])
-if 'show_history' not in st.session_state: st.session_state.show_history = False # ตัวแปรสำหรับคุมปุ่มประวัติ
+if 'show_history' not in st.session_state: st.session_state.show_history = False 
 
-# โหลดข้อมูลประวัติจาก Google Sheets ตอนเปิดเว็บครั้งแรก
 if 'history_log' not in st.session_state: 
     st.session_state.history_log = load_history()
 
@@ -128,7 +142,6 @@ for p in player_list:
 
 st.metric("👥 สมาชิกทั้งหมด", f"{len(player_list)} คน")
 
-# --- ปุ่มกดดูประวัติ (อยู่ใต้จำนวนคน) ---
 if st.session_state.show_history:
     st.button("⬅️ กลับไปหน้าสุ่มหลัก", on_click=toggle_history, type="primary", use_container_width=True)
 else:
@@ -137,7 +150,7 @@ else:
 st.markdown("---")
 
 # ==========================================
-# สลับหน้าจอ: ถ้ากดปุ่มให้โชว์ประวัติ / ถ้าไม่กดให้โชว์แท็บสุ่ม
+# หน้าจอประวัติการสุ่ม
 # ==========================================
 if st.session_state.show_history:
     st.subheader("📜 ประวัติการสุ่มย้อนหลัง (เชื่อมต่อ Database)")
@@ -158,7 +171,6 @@ if st.session_state.show_history:
         if not filtered_log:
             st.info(f"ยังไม่มีประวัติในหมวดหมู่ '{filter_category}'")
         else:
-            # ระบบจัดกลุ่มตามวันที่
             grouped_logs = {}
             for log in filtered_log:
                 raw_time = log.get('time', '').replace("'", "")
@@ -175,30 +187,26 @@ if st.session_state.show_history:
                     grouped_logs[date_part] = []
                 grouped_logs[date_part].append({**log, 'display_time': time_part})
                 
-            # แสดงผลทีละกลุ่มวันที่
             for d_str, logs_in_date in grouped_logs.items():
                 st.markdown(f"<div class='date-header'>📅 วันที่: {d_str}</div>", unsafe_allow_html=True)
                 
                 for log in logs_in_date:
-                    with st.expander(f"🕒 {log['display_time']} | {log['title']}", expanded=False):
-                        st.code(log['detail'], language="text")
-                        
-                        if st.button("🗑️ ลบรายการนี้", key=f"del_{log.get('id', random.randint(1,99999))}"):
-                            delete_history_item(log['id'])
-                            st.success("ลบรายการนี้สำเร็จ! กำลังโหลดหน้าจอใหม่...")
-                            time.sleep(0.5)
-                            st.rerun()
+                    # แบ่งคอลัมน์: กล่องข้อมูล 85% / ปุ่มลบ 15%
+                    c_exp, c_btn = st.columns([0.85, 0.15])
+                    with c_exp:
+                        with st.expander(f"🕒 {log['display_time']} | {log['title']}", expanded=False):
+                            st.code(log['detail'], language="text")
+                    with c_btn:
+                        # ปุ่มลบอยู่ด้านหลังพอดี
+                        if st.button("🗑️ ลบ", key=f"btn_del_{log.get('id', random.randint(1,99999))}", use_container_width=True):
+                            confirm_delete_dialog(log['id'])
 
 else:
-    # --- กลับมาหน้าสุ่มปกติ (แท็บ 1-4) ---
+    # --- หน้าสุ่มปกติ ---
     tab1, tab2, tab3, tab4 = st.tabs(["🏸 แบดมินตัน", "🚗 สุ่มขึ้นรถ", "⚽ ฟุตบอล", "📚 ทำงานกลุ่ม"])
 
-    # ==========================================
-    # TAB 1: ระบบจัดทีมแบดมินตัน
-    # ==========================================
     with tab1:
         st.subheader("🏸 สุ่มทีมแบดมินตัน")
-        
         wins = [s['wins'] for s in st.session_state.player_stats.values()] if st.session_state.player_stats else [0]
         max_wins = max(wins) if wins else 0
         mvps = [p for p, s in st.session_state.player_stats.items() if s['wins'] == max_wins and max_wins > 0]
@@ -349,9 +357,6 @@ else:
         table_data = [{"อันดับ": f"{'🥇' if i==0 else '🥈' if i==1 else '🥉' if i==2 else ''} {i+1}", "ชื่อ": p, "ชนะ": s['wins'], "เล่น": s['played'], "Win Rate": f"{(s['wins']/s['played']*100) if s['played']>0 else 0:.0f}%"} for i, (p, s) in enumerate(sorted_stats)]
         st.dataframe(table_data, use_container_width=True)
 
-    # ==========================================
-    # TAB 2: ระบบสุ่มคนขึ้นรถ
-    # ==========================================
     with tab2:
         st.subheader("🚗 สุ่มคนขึ้นรถ")
         num_cars = st.number_input("จำนวนรถทั้งหมด (คัน)", min_value=1, max_value=10, value=2, key="num_cars")
@@ -391,9 +396,6 @@ else:
             st.caption("👇 คัดลอกข้อความส่ง LINE")
             st.code("\n".join(car_lines), language="text")
 
-    # ==========================================
-    # TAB 3: ระบบจัดทีมฟุตบอล
-    # ==========================================
     with tab3:
         st.subheader("⚽ สุ่มทีมฟุตบอล")
         c1, c2 = st.columns(2)
@@ -428,9 +430,6 @@ else:
             st.caption("👇 คัดลอกข้อความส่ง LINE")
             st.code("\n\n".join(fb_lines), language="text")
 
-    # ==========================================
-    # TAB 4: ระบบสุ่มทำงานกลุ่ม
-    # ==========================================
     with tab4:
         st.subheader("📚 แบ่งกลุ่มทำงาน")
         num_groups = st.number_input("จำนวนกลุ่มที่ต้องการทั้งหมด", min_value=1, max_value=20, value=3, key="num_groups")
