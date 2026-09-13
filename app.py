@@ -4,7 +4,7 @@ import re
 import time
 from datetime import datetime
 import pytz
-import requests # เพิ่มไลบรารีนี้สำหรับคุยกับ Google Sheets
+import requests 
 
 # --- ตั้งค่าหน้าเว็บ (Hiso Random) ---
 st.set_page_config(page_title="Hiso Random", page_icon="🎲", layout="centered")
@@ -46,8 +46,6 @@ def show_tarot_animation():
 API_URL = "https://script.google.com/macros/s/AKfycbz8DpXlLxi5FzmaRYxhiWlBmNtJTdX4pLeI5z8rFRql4E8qfEo1M4g32FXNEJCB8PAy9g/exec"
 
 def load_history():
-    if API_URL == "https://script.google.com/macros/s/AKfycbz8DpXlLxi5FzmaRYxhiWlBmNtJTdX4pLeI5z8rFRql4E8qfEo1M4g32FXNEJCB8PAy9g/exec":
-        return []
     try:
         res = requests.get(API_URL)
         return res.json()
@@ -57,19 +55,32 @@ def load_history():
 def add_to_history(category, title, detail_text):
     tz = pytz.timezone('Asia/Bangkok')
     current_time = datetime.now(tz).strftime("%H:%M:%S")
+    # สร้าง ID ให้แต่ละการสุ่มเพื่อใช้ตอนลบทีละอัน
+    item_id = f"ID_{int(time.time() * 1000)}_{random.randint(100,999)}"
     
-    # 1. ข้อมูลสำหรับอัปเดตโชว์บนหน้าเว็บทันที
-    new_log = {"category": category, "time": current_time, "title": title, "detail": detail_text}
+    new_log = {
+        "action": "add",
+        "id": item_id,
+        "category": category, 
+        "time": f"'{current_time}", # กัน Google แปลงปี
+        "title": title, 
+        "detail": detail_text
+    }
+    
     st.session_state.history_log.insert(0, new_log)
-    
-    # 2. ส่งข้อมูลไปเก็บที่ Google Sheets (แอบเติม ' หน้าเวลา เพื่อกัน Google แปลงเป็นปี 1899)
-    if API_URL != "https://script.google.com/macros/s/AKfycbz8DpXlLxi5FzmaRYxhiWlBmNtJTdX4pLeI5z8rFRql4E8qfEo1M4g32FXNEJCB8PAy9g/exec":
-        gsheet_log = {"category": category, "time": f"'{current_time}", "title": title, "detail": detail_text}
-        try:
-            requests.post(API_URL, json=gsheet_log)
-        except:
-            pass
+    try:
+        requests.post(API_URL, json=new_log)
+    except:
+        pass
 
+def delete_history_item(item_id):
+    # ลบออกจากหน้าเว็บทันที
+    st.session_state.history_log = [log for log in st.session_state.history_log if log.get('id') != item_id]
+    # ส่งคำสั่งไปลบที่ Google Sheets เบื้องหลัง
+    try:
+        requests.post(API_URL, json={"action": "delete", "id": item_id})
+    except:
+        pass
 # ==========================================
 
 
@@ -389,7 +400,7 @@ with tab4:
         st.code("\n".join(grp_lines), language="text")
 
 # ==========================================
-# TAB 5: 📜 ประวัติย้อนหลัง (อัปเกรดดึงจาก Google Sheets)
+# TAB 5: 📜 ประวัติย้อนหลัง 
 # ==========================================
 with tab5:
     st.subheader("📜 ประวัติการสุ่มทั้งหมด (เชื่อมต่อ Database)")
@@ -411,5 +422,15 @@ with tab5:
             st.info(f"ยังไม่มีประวัติในหมวดหมู่ '{filter_category}'")
         else:
             for idx, log in enumerate(filtered_log):
-                with st.expander(f"🕒 {log['time']} | {log['title']}", expanded=(idx==0)):
+                # เอาเครื่องหมาย ' ออกจากเวลาตอนแสดงผล
+                display_time = log.get('time', '').replace("'", "")
+                
+                with st.expander(f"🕒 {display_time} | {log['title']}", expanded=(idx==0)):
                     st.code(log['detail'], language="text")
+                    
+                    # ปุ่มสำหรับลบแยกทีละรายการ
+                    if st.button("🗑️ ลบรายการนี้", key=f"del_{log.get('id', idx)}"):
+                        delete_history_item(log['id'])
+                        st.success("ลบรายการนี้สำเร็จ!")
+                        time.sleep(0.5)
+                        st.rerun()
