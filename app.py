@@ -120,6 +120,7 @@ if 'pair_hist' not in st.session_state: st.session_state.pair_hist = {}
 if 'priority_players' not in st.session_state: st.session_state.priority_players = []
 if 'round_num' not in st.session_state: st.session_state.round_num = 1
 if 'current_matches' not in st.session_state: st.session_state.current_matches = []
+if 'custom_matches' not in st.session_state: st.session_state.custom_matches = [] # แยกตัวแปรเก็บแมตช์เลือกเองโดยเฉพาะ
 if 'waiting_data' not in st.session_state: st.session_state.waiting_data = ({}, [])
 if 'show_history' not in st.session_state: st.session_state.show_history = False 
 
@@ -215,18 +216,18 @@ else:
         
         col1, col2 = st.columns(2)
         with col1: num_courts = st.number_input("จำนวนคอร์ด", min_value=1, max_value=10, value=2)
-        with col2: play_type = st.radio("ประเภทการเล่น", ["ตีคู่ (ทีมละ 2 คน)", "ตีเดี่ยว (ทีมละ 1 คน)"])
+        with col2: play_type = play_type = st.radio("ประเภทการเล่น", ["ตีคู่ (ทีมละ 2 คน)", "ตีเดี่ยว (ทีมละ 1 คน)"])
         
-        # --- ฟีเจอร์: เพิ่มคู่การแข่งขันเอง (รวมกับระบบ MVP แต่ไม่ลงประวัติ) ---
+        # --- ฟีเจอร์: เพิ่มคู่การแข่งขันเอง (แยกโซนต่างหาก ไม่ปะปนกับการสุ่มหลัก) ---
         with st.expander("➕ เพิ่มคู่การแข่งขันเอง (กำหนดคู่และคอร์ดพิเศษ)"):
             c_input_1, c_input_2 = st.columns(2)
             with c_input_1:
-                target_court = st.number_input("เลือกคอร์ดที่จะจัดลง", min_value=1, max_value=int(num_courts), value=1)
+                target_court = st.number_input("เลือกคอร์ดพิเศษ", min_value=1, max_value=int(num_courts), value=1, key="custom_court_input")
             with c_input_2:
-                match_mode = st.radio("รูปแบบการจัดคู่เอง", ["ตีคู่ (2v2)", "ตีเดี่ยว (1v1)"], horizontal=True)
+                match_mode = st.radio("รูปแบบการจัดคู่เอง", ["ตีคู่ (2v2)", "ตีเดี่ยว (1v1)"], horizontal=True, key="custom_mode_input")
             
             p_count = 2 if "ตีคู่" in match_mode else 1
-            st.markdown(f"**เลือกรายชื่อผู้เล่นสำหรับคอร์ดที่ {target_court}**")
+            st.markdown(f"**เลือกรายชื่อผู้เล่นสำหรับคอร์ดพิเศษที่ {target_court}**")
             
             cc1, cc2 = st.columns(2)
             with cc1:
@@ -244,18 +245,25 @@ else:
                     if p_sel != "- เลือกผู้เล่น -":
                         team2_custom.append(p_sel)
                         
-            if st.button("📌 บันทึกคู่นี้ลงสนาม (คิดคะแนน MVP แต่ไม่บันทึกประวัติ)", use_container_width=True):
-                if not team1_custom or not team2_custom:
-                    st.warning("⚠️ กรุณาเลือกรายชื่อผู้เล่นให้ครบถ้วนก่อนบันทึก")
-                else:
-                    new_custom_match = {"court": int(target_court), "team1": team1_custom, "team2": team2_custom}
-                    existing_matches = [m for m in st.session_state.current_matches if m["court"] != int(target_court)]
-                    existing_matches.append(new_custom_match)
-                    existing_matches = sorted(existing_matches, key=lambda x: x["court"])
-                    
-                    st.session_state.current_matches = existing_matches
-                    st.success(f"✅ จัดคู่พิเศษให้คอร์ดที่ {target_court} สำเร็จ!")
-                    time.sleep(0.8)
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                if st.button("📌 บันทึกเพิ่มคู่พิเศษ", use_container_width=True):
+                    if not team1_custom or not team2_custom:
+                        st.warning("⚠️ กรุณาเลือกรายชื่อผู้เล่นให้ครบถ้วน")
+                    else:
+                        new_custom = {"court": int(target_court), "team1": team1_custom, "team2": team2_custom}
+                        # แทนที่คอร์ดเดิมถ้าเคยสร้างไว้
+                        st.session_state.custom_matches = [m for m in st.session_state.custom_matches if m["court"] != int(target_court)]
+                        st.session_state.custom_matches.append(new_custom)
+                        st.session_state.custom_matches = sorted(st.session_state.custom_matches, key=lambda x: x["court"])
+                        st.success(f"✅ เพิ่มคู่พิเศษคอร์ดที่ {target_court} สำเร็จ!")
+                        time.sleep(0.6)
+                        st.rerun()
+            with col_b2:
+                if st.button("🗑️ ล้างคู่พิเศษทั้งหมด", use_container_width=True):
+                    st.session_state.custom_matches = []
+                    st.success("🗑️ ล้างคู่พิเศษเรียบร้อย!")
+                    time.sleep(0.6)
                     st.rerun()
         # --------------------------------------------------
             
@@ -265,6 +273,7 @@ else:
             st.session_state.priority_players = []
             st.session_state.round_num = 1
             st.session_state.current_matches = []
+            st.session_state.custom_matches = []
             st.session_state.waiting_data = ({}, [])
             for p in player_list:
                 st.session_state.player_stats[p] = {'played': 0, 'wins': 0}
@@ -339,18 +348,21 @@ else:
             
             add_to_history("แบดมินตัน", f"🏸 แบดมินตัน (รอบที่ {st.session_state.round_num})", "\n".join(summary_lines))
 
+        # ==========================================
+        # โซนที่ 1: ผลการจัดทีมจากการสุ่ม (ระบบหลัก)
+        # ==========================================
         if st.session_state.current_matches:
             st.markdown("---")
-            st.subheader(f"🔥 ผลการจัดทีมรอบที่ {st.session_state.round_num}")
-            with st.form("score_form"):
-                results = {}
+            st.subheader(f"🔥 ผลการจัดทีมสุ่ม รอบที่ {st.session_state.round_num}")
+            with st.form("score_form_random"):
+                results_random = {}
                 for match in st.session_state.current_matches:
                     t1, t2 = " & ".join(match["team1"]), " & ".join(match["team2"])
                     c1, c2, c3 = st.columns([4, 1, 4])
                     with c1: st.info(f"🔵 **คอร์ด {match['court']} | ทีม 1:**\n\n{t1}")
                     with c2: st.markdown("<div class='vs-text'>VS</div>", unsafe_allow_html=True)
                     with c3: st.error(f"🔴 **คอร์ด {match['court']} | ทีม 2:**\n\n{t2}")
-                    results[match['court']] = st.radio(f"บันทึกผล คอร์ด {match['court']}", ["ไม่คิดคะแนน / เสมอ", f"ทีม 1 ชนะ", f"ทีม 2 ชนะ"], horizontal=True, key=f"court_{match['court']}")
+                    results_random[match['court']] = st.radio(f"บันทึกผล คอร์ด {match['court']}", ["ไม่คิดคะแนน / เสมอ", f"ทีม 1 ชนะ", f"ทีม 2 ชนะ"], horizontal=True, key=f"rand_court_{match['court']}")
                     st.markdown("---")
                 
                 waiting_teams, leftover = st.session_state.waiting_data
@@ -372,9 +384,9 @@ else:
                 st.caption("👇 คัดลอกข้อความสรุปผลเพื่อส่ง LINE")
                 st.code("\n".join(summary_lines), language="text")
                 
-                if st.form_submit_button("บันทึกคะแนนและไปรอบต่อไป ✅", use_container_width=True):
+                if st.form_submit_button("บันทึกคะแนนทีมสุ่ม และไปรอบต่อไป ✅", use_container_width=True):
                     for match in st.session_state.current_matches:
-                        res = results[match['court']]
+                        res = results_random[match['court']]
                         for team in [match["team1"], match["team2"]]:
                             for i in range(len(team)):
                                 for j in range(i+1, len(team)):
@@ -388,6 +400,36 @@ else:
                             for p in match["team2"]: st.session_state.player_stats[p]['wins'] += 1
                     st.session_state.round_num += 1
                     st.session_state.current_matches = [] 
+                    st.rerun()
+
+        # ==========================================
+        # โซนที่ 2: ผลการแข่งขันคู่พิเศษ (เลือกเอง)
+        # ==========================================
+        if st.session_state.custom_matches:
+            st.markdown("---")
+            st.subheader("⭐ ผลการแข่งขันคู่พิเศษ (กำหนดเอง)")
+            with st.form("score_form_custom"):
+                results_custom = {}
+                for match in st.session_state.custom_matches:
+                    t1, t2 = " & ".join(match["team1"]), " & ".join(match["team2"])
+                    c1, c2, c3 = st.columns([4, 1, 4])
+                    with c1: st.info(f"🔵 **คอร์ดพิเศษ {match['court']} | ทีม 1:**\n\n{t1}")
+                    with c2: st.markdown("<div class='vs-text'>VS</div>", unsafe_allow_html=True)
+                    with c3: st.error(f"🔴 **คอร์ดพิเศษ {match['court']} | ทีม 2:**\n\n{t2}")
+                    results_custom[match['court']] = st.radio(f"บันทึกผล คอร์ดพิเศษ {match['court']}", ["ไม่คิดคะแนน / เสมอ", f"ทีม 1 ชนะ", f"ทีม 2 ชนะ"], horizontal=True, key=f"custom_court_{match['court']}")
+                    st.markdown("---")
+                
+                if st.form_submit_button("บันทึกคะแนนคู่พิเศษ (คิดคะแนน MVP)", use_container_width=True):
+                    for match in st.session_state.custom_matches:
+                        res = results_custom[match['court']]
+                        if "ทีม 1" in res:
+                            for p in match["team1"] + match["team2"]: st.session_state.player_stats[p]['played'] += 1
+                            for p in match["team1"]: st.session_state.player_stats[p]['wins'] += 1
+                        elif "ทีม 2" in res:
+                            for p in match["team1"] + match["team2"]: st.session_state.player_stats[p]['played'] += 1
+                            for p in match["team2"]: st.session_state.player_stats[p]['wins'] += 1
+                    st.success("✅ บันทึกคะแนนคู่พิเศษเข้าสู่ระบบ MVP เรียบร้อยแล้ว!")
+                    time.sleep(1)
                     st.rerun()
 
         st.markdown("---")
@@ -489,7 +531,7 @@ else:
             grp_lines = ["📚 สรุปกลุ่มทำงาน"]
             for i, grp in enumerate(groups): grp_lines.append(f"กลุ่มที่ {i+1}: {', '.join(grp) if grp else '(ไม่มีสมาชิก)'}")
             add_to_history("ทำงานกลุ่ม", "📚 ผลสุ่มกลุ่มทำงาน", "\n".join(grp_lines))
-            
+                
             st.markdown("---")
             st.subheader("📚 สรุปรายชื่อกลุ่มทำงาน")
             cols = st.columns(2)
@@ -498,6 +540,6 @@ else:
                 with cols[i % 2]: colors[i % 4](f"**📝 กลุ่มที่ {i+1}** (ต้องการ {group_sizes[i]} ได้ {len(grp)})\n\n👥 **สมาชิก:** {', '.join(grp) if grp else '*(ไม่มีสมาชิก)*'}")
             if grp_players: st.error(f"👤 **คนที่เหลือ (ไม่มีกลุ่ม):** {', '.join(grp_players)}")
             
-            st.markdown("---")
+            st.markdown---
             st.caption("👇 คัดลอกข้อความส่ง LINE")
             st.code("\n".join(grp_lines), language="text")
