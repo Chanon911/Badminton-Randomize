@@ -6,33 +6,34 @@ import time
 # --- ตั้งค่าหน้าเว็บ (Hiso Random) ---
 st.set_page_config(page_title="Hiso Random", page_icon="🎲", layout="centered")
 
-# --- ฟังก์ชันแอนิเมชันไพ่ทาโรต์ (Custom CSS) ---
+# --- ฟังก์ชันแอนิเมชันไพ่ทาโรต์ (อัปเกรดให้แสดงผลทุกครั้งที่กด) ---
 def show_tarot_animation():
-    st.markdown("""
+    uid = random.randint(10000, 99999) # สุ่ม ID ใหม่ทุกรอบเพื่อให้แอนิเมชันเล่นซ้ำ
+    st.markdown(f"""
         <style>
-            @keyframes tarotFall {
-                0% { top: -10%; transform: rotate(0deg) scale(1); opacity: 1; }
-                100% { top: 110%; transform: rotate(720deg) scale(1.2); opacity: 0; }
-            }
-            .tarot-card {
+            @keyframes tarotFall_{uid} {{
+                0% {{ top: -10%; transform: rotate(0deg) scale(1); opacity: 1; }}
+                100% {{ top: 110%; transform: rotate(720deg) scale(1.2); opacity: 0; }}
+            }}
+            .tarot-card-{uid} {{
                 position: fixed;
                 font-size: 3.5rem;
                 z-index: 999999;
                 pointer-events: none;
                 user-select: none;
-                animation: tarotFall 3s ease-in forwards;
-            }
+                animation: tarotFall_{uid} 3s ease-in forwards;
+            }}
         </style>
-        <div class="tarot-card" style="left: 5%; animation-duration: 2.5s; animation-delay: 0s;">🃏</div>
-        <div class="tarot-card" style="left: 15%; animation-duration: 3.2s; animation-delay: 0.2s;">🎴</div>
-        <div class="tarot-card" style="left: 25%; animation-duration: 2.8s; animation-delay: 0.5s;">🔮</div>
-        <div class="tarot-card" style="left: 35%; animation-duration: 3.5s; animation-delay: 0.1s;">🃏</div>
-        <div class="tarot-card" style="left: 45%; animation-duration: 2.9s; animation-delay: 0.4s;">✨</div>
-        <div class="tarot-card" style="left: 55%; animation-duration: 3.1s; animation-delay: 0.2s;">🎴</div>
-        <div class="tarot-card" style="left: 65%; animation-duration: 2.6s; animation-delay: 0.6s;">🃏</div>
-        <div class="tarot-card" style="left: 75%; animation-duration: 3.3s; animation-delay: 0.3s;">🔮</div>
-        <div class="tarot-card" style="left: 85%; animation-duration: 2.7s; animation-delay: 0.5s;">🎴</div>
-        <div class="tarot-card" style="left: 95%; animation-duration: 3.4s; animation-delay: 0.1s;">🃏</div>
+        <div class="tarot-card-{uid}" style="left: 5%; animation-duration: 2.0s; animation-delay: 0s;">🃏</div>
+        <div class="tarot-card-{uid}" style="left: 15%; animation-duration: 2.5s; animation-delay: 0.2s;">🎴</div>
+        <div class="tarot-card-{uid}" style="left: 25%; animation-duration: 2.2s; animation-delay: 0.5s;">🔮</div>
+        <div class="tarot-card-{uid}" style="left: 35%; animation-duration: 2.8s; animation-delay: 0.1s;">🃏</div>
+        <div class="tarot-card-{uid}" style="left: 45%; animation-duration: 2.3s; animation-delay: 0.4s;">✨</div>
+        <div class="tarot-card-{uid}" style="left: 55%; animation-duration: 2.6s; animation-delay: 0.2s;">🎴</div>
+        <div class="tarot-card-{uid}" style="left: 65%; animation-duration: 2.1s; animation-delay: 0.6s;">🃏</div>
+        <div class="tarot-card-{uid}" style="left: 75%; animation-duration: 2.7s; animation-delay: 0.3s;">🔮</div>
+        <div class="tarot-card-{uid}" style="left: 85%; animation-duration: 2.4s; animation-delay: 0.5s;">🎴</div>
+        <div class="tarot-card-{uid}" style="left: 95%; animation-duration: 2.9s; animation-delay: 0.1s;">🃏</div>
     """, unsafe_allow_html=True)
 
 # --- โหลดฟอนต์ Kanit และปรับแต่ง UI ---
@@ -140,66 +141,71 @@ with tab1:
     players_per_team = 2 if "ตีคู่" in play_type else 1
 
     if st.button(f"🎲 สุ่มจัดทีมรอบที่ {st.session_state.round_num}", type="primary", use_container_width=True):
-        with st.spinner('กำลังสับไพ่ทาโรต์... 🃏'):
-            time.sleep(1)
-            slots_needed = int(num_courts) * players_per_team * 2
-            priority_players = [p for p in st.session_state.priority_players if p in player_list]
-            regular_players = [p for p in player_list if p not in priority_players]
-            
-            random.shuffle(regular_players)
-            
-            if len(priority_players) >= slots_needed:
-                main_match_players = priority_players[:slots_needed]
-                new_priority = priority_players[slots_needed:] + regular_players
-            else:
-                main_match_players = priority_players.copy()
-                needed = slots_needed - len(main_match_players)
-                needed = min(needed, len(regular_players))
-                main_match_players.extend(regular_players[:needed])
-                new_priority = regular_players[needed:]
-
-            best_permutation = main_match_players
-            best_penalty = float('inf')
-            
-            for _ in range(30):
-                temp_players = main_match_players.copy()
-                random.shuffle(temp_players)
-                penalty = 0
-                for c in range(int(num_courts)):
-                    idx = c * players_per_team * 2
-                    if idx + players_per_team * 2 <= len(temp_players):
-                        t1 = temp_players[idx:idx+players_per_team]
-                        t2 = temp_players[idx+players_per_team:idx+players_per_team*2]
-                        for i in range(len(t1)):
-                            for j in range(i+1, len(t1)):
-                                penalty += st.session_state.pair_hist.get(t1[i], {}).get(t1[j], 0)
-                        for i in range(len(t2)):
-                            for j in range(i+1, len(t2)):
-                                penalty += st.session_state.pair_hist.get(t2[i], {}).get(t2[j], 0)
-                if penalty < best_penalty:
-                    best_penalty = penalty
-                    best_permutation = temp_players
-                    if penalty == 0: break
-            
-            matches = []
-            temp_main = best_permutation.copy()
-            for c in range(int(num_courts)):
-                if len(temp_main) >= players_per_team * 2:
-                    team1 = [temp_main.pop(0) for _ in range(players_per_team)]
-                    team2 = [temp_main.pop(0) for _ in range(players_per_team)]
-                    matches.append({"court": c + 1, "team1": team1, "team2": team2})
-            
-            waiting_teams = []
-            temp_wait = new_priority.copy()
-            while len(temp_wait) >= players_per_team:
-                waiting_teams.append([temp_wait.pop(0) for _ in range(players_per_team)])
-                
-            st.session_state.current_matches = matches
-            st.session_state.waiting_data = (waiting_teams, temp_wait)
-            st.session_state.priority_players = new_priority.copy()
-        
-        # เรียกใช้แอนิเมชันไพ่ แทนลูกโป่งเดิม
+        # 1. แสดงแอนิเมชันไพ่ก่อน
         show_tarot_animation()
+        
+        # 2. หน่วงเวลา 1.5 วินาทีให้รอลุ้น (ไม่ให้มีข้อความโหลด)
+        ph = st.empty()
+        ph.write("") 
+        time.sleep(1.5)
+        ph.empty()
+        
+        # 3. คำนวณผลลัพธ์
+        slots_needed = int(num_courts) * players_per_team * 2
+        priority_players = [p for p in st.session_state.priority_players if p in player_list]
+        regular_players = [p for p in player_list if p not in priority_players]
+        
+        random.shuffle(regular_players)
+        
+        if len(priority_players) >= slots_needed:
+            main_match_players = priority_players[:slots_needed]
+            new_priority = priority_players[slots_needed:] + regular_players
+        else:
+            main_match_players = priority_players.copy()
+            needed = slots_needed - len(main_match_players)
+            needed = min(needed, len(regular_players))
+            main_match_players.extend(regular_players[:needed])
+            new_priority = regular_players[needed:]
+
+        best_permutation = main_match_players
+        best_penalty = float('inf')
+        
+        for _ in range(30):
+            temp_players = main_match_players.copy()
+            random.shuffle(temp_players)
+            penalty = 0
+            for c in range(int(num_courts)):
+                idx = c * players_per_team * 2
+                if idx + players_per_team * 2 <= len(temp_players):
+                    t1 = temp_players[idx:idx+players_per_team]
+                    t2 = temp_players[idx+players_per_team:idx+players_per_team*2]
+                    for i in range(len(t1)):
+                        for j in range(i+1, len(t1)):
+                            penalty += st.session_state.pair_hist.get(t1[i], {}).get(t1[j], 0)
+                    for i in range(len(t2)):
+                        for j in range(i+1, len(t2)):
+                            penalty += st.session_state.pair_hist.get(t2[i], {}).get(t2[j], 0)
+            if penalty < best_penalty:
+                best_penalty = penalty
+                best_permutation = temp_players
+                if penalty == 0: break
+        
+        matches = []
+        temp_main = best_permutation.copy()
+        for c in range(int(num_courts)):
+            if len(temp_main) >= players_per_team * 2:
+                team1 = [temp_main.pop(0) for _ in range(players_per_team)]
+                team2 = [temp_main.pop(0) for _ in range(players_per_team)]
+                matches.append({"court": c + 1, "team1": team1, "team2": team2})
+        
+        waiting_teams = []
+        temp_wait = new_priority.copy()
+        while len(temp_wait) >= players_per_team:
+            waiting_teams.append([temp_wait.pop(0) for _ in range(players_per_team)])
+            
+        st.session_state.current_matches = matches
+        st.session_state.waiting_data = (waiting_teams, temp_wait)
+        st.session_state.priority_players = new_priority.copy()
 
     if st.session_state.current_matches:
         st.markdown("---")
@@ -292,18 +298,21 @@ with tab2:
             cars_info.append({"car_num": i+1, "driver": driver, "capacity": capacity})
             
     if st.button("🎲 จัดคนขึ้นรถ", type="primary", use_container_width=True):
-        with st.spinner('กำลังสับไพ่ทาโรต์... 🃏'):
-            time.sleep(0.8)
-            drivers_list = [c["driver"] for c in cars_info if c["driver"] != "- ยังไม่ระบุ -"]
-            passengers_list = [p for p in player_list if p not in drivers_list]
-            random.shuffle(passengers_list)
-            
-            results = []
-            for car in cars_info:
-                car_passengers = [passengers_list.pop(0) for _ in range(int(car["capacity"])) if passengers_list]
-                results.append({"car_num": car["car_num"], "driver": car["driver"], "passengers": car_passengers})
-                
         show_tarot_animation()
+        ph = st.empty()
+        ph.write("")
+        time.sleep(1.5)
+        ph.empty()
+        
+        drivers_list = [c["driver"] for c in cars_info if c["driver"] != "- ยังไม่ระบุ -"]
+        passengers_list = [p for p in player_list if p not in drivers_list]
+        random.shuffle(passengers_list)
+        
+        results = []
+        for car in cars_info:
+            car_passengers = [passengers_list.pop(0) for _ in range(int(car["capacity"])) if passengers_list]
+            results.append({"car_num": car["car_num"], "driver": car["driver"], "passengers": car_passengers})
+            
         st.markdown("---")
         st.subheader("🏁 ผลการจัดคนขึ้นรถ")
         
@@ -337,22 +346,25 @@ with tab3:
     with col2: players_per_fb = st.number_input("ผู้เล่นต่อทีม", min_value=1, max_value=11, value=5)
         
     if st.button("🎲 สุ่มทีมฟุตบอล", type="primary", use_container_width=True):
-        with st.spinner('กำลังสับไพ่ทาโรต์... 🃏'):
-            time.sleep(1)
-            fb_players = player_list.copy()
-            random.shuffle(fb_players)
-            
-            fb_teams = []
-            for _ in range(int(num_fb_teams)):
-                team = [fb_players.pop(0) for _ in range(int(players_per_fb)) if fb_players]
-                fb_teams.append(team)
-                
-            team_indices = list(range(len(fb_teams)))
-            num_bibs = max(1, len(fb_teams) // 2)
-            teams_with_bibs = random.sample(team_indices, k=num_bibs)
-            team_kickoff = random.choice(team_indices)
-            
         show_tarot_animation()
+        ph = st.empty()
+        ph.write("")
+        time.sleep(1.5)
+        ph.empty()
+        
+        fb_players = player_list.copy()
+        random.shuffle(fb_players)
+        
+        fb_teams = []
+        for _ in range(int(num_fb_teams)):
+            team = [fb_players.pop(0) for _ in range(int(players_per_fb)) if fb_players]
+            fb_teams.append(team)
+            
+        team_indices = list(range(len(fb_teams)))
+        num_bibs = max(1, len(fb_teams) // 2)
+        teams_with_bibs = random.sample(team_indices, k=num_bibs)
+        team_kickoff = random.choice(team_indices)
+            
         st.markdown("---")
         st.subheader("🏁 ผลการจัดทีมฟุตบอล")
         
@@ -394,17 +406,20 @@ with tab4:
             group_sizes.append(int(size))
             
     if st.button("🎲 สุ่มกลุ่มทำงาน", type="primary", use_container_width=True):
-        with st.spinner('กำลังสับไพ่ทาโรต์... 🃏'):
-            time.sleep(0.8)
-            grp_players = player_list.copy()
-            random.shuffle(grp_players)
-            
-            groups = []
-            for i, target_size in enumerate(group_sizes):
-                grp = [grp_players.pop(0) for _ in range(target_size) if grp_players]
-                groups.append(grp)
-        
         show_tarot_animation()
+        ph = st.empty()
+        ph.write("")
+        time.sleep(1.5)
+        ph.empty()
+        
+        grp_players = player_list.copy()
+        random.shuffle(grp_players)
+        
+        groups = []
+        for i, target_size in enumerate(group_sizes):
+            grp = [grp_players.pop(0) for _ in range(target_size) if grp_players]
+            groups.append(grp)
+        
         st.markdown("---")
         st.subheader("📚 สรุปรายชื่อกลุ่มทำงาน")
         
