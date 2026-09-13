@@ -6,7 +6,36 @@ import time
 # --- ตั้งค่าหน้าเว็บ (Hiso Random) ---
 st.set_page_config(page_title="Hiso Random", page_icon="🎲", layout="centered")
 
-# --- โหลดฟอนต์ Kanit และปรับแต่ง UI ให้มินิมอล ---
+# --- ฟังก์ชันแอนิเมชันไพ่ทาโรต์ (Custom CSS) ---
+def show_tarot_animation():
+    st.markdown("""
+        <style>
+            @keyframes tarotFall {
+                0% { top: -10%; transform: rotate(0deg) scale(1); opacity: 1; }
+                100% { top: 110%; transform: rotate(720deg) scale(1.2); opacity: 0; }
+            }
+            .tarot-card {
+                position: fixed;
+                font-size: 3.5rem;
+                z-index: 999999;
+                pointer-events: none;
+                user-select: none;
+                animation: tarotFall 3s ease-in forwards;
+            }
+        </style>
+        <div class="tarot-card" style="left: 5%; animation-duration: 2.5s; animation-delay: 0s;">🃏</div>
+        <div class="tarot-card" style="left: 15%; animation-duration: 3.2s; animation-delay: 0.2s;">🎴</div>
+        <div class="tarot-card" style="left: 25%; animation-duration: 2.8s; animation-delay: 0.5s;">🔮</div>
+        <div class="tarot-card" style="left: 35%; animation-duration: 3.5s; animation-delay: 0.1s;">🃏</div>
+        <div class="tarot-card" style="left: 45%; animation-duration: 2.9s; animation-delay: 0.4s;">✨</div>
+        <div class="tarot-card" style="left: 55%; animation-duration: 3.1s; animation-delay: 0.2s;">🎴</div>
+        <div class="tarot-card" style="left: 65%; animation-duration: 2.6s; animation-delay: 0.6s;">🃏</div>
+        <div class="tarot-card" style="left: 75%; animation-duration: 3.3s; animation-delay: 0.3s;">🔮</div>
+        <div class="tarot-card" style="left: 85%; animation-duration: 2.7s; animation-delay: 0.5s;">🎴</div>
+        <div class="tarot-card" style="left: 95%; animation-duration: 3.4s; animation-delay: 0.1s;">🃏</div>
+    """, unsafe_allow_html=True)
+
+# --- โหลดฟอนต์ Kanit และปรับแต่ง UI ---
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
@@ -63,7 +92,7 @@ for p in player_list:
     if p not in st.session_state.pair_hist:
         st.session_state.pair_hist[p] = {}
 
-# --- 📊 Dashboard Metrics (แสดงเฉพาะจำนวนคนทั้งหมด) ---
+# --- 📊 Dashboard Metrics ---
 st.metric("👥 สมาชิกทั้งหมด", f"{len(player_list)} คน")
 
 st.markdown("---")
@@ -77,7 +106,6 @@ tab1, tab2, tab3, tab4 = st.tabs(["🏸 แบดมินตัน", "🚗 ส�
 with tab1:
     st.subheader("🏸 สุ่มทีมแบดมินตัน")
     
-    # ย้าย MVP และคนรอ มาแสดงเฉพาะในหน้านี้
     wins = [s['wins'] for s in st.session_state.player_stats.values()] if st.session_state.player_stats else [0]
     max_wins = max(wins) if wins else 0
     mvps = [p for p, s in st.session_state.player_stats.items() if s['wins'] == max_wins and max_wins > 0]
@@ -87,7 +115,7 @@ with tab1:
     m1, m2 = st.columns(2)
     m1.metric("🏆 ผู้นำ MVP ตอนนี้", mvp_text)
     m2.metric("🪑 รอคิวตีแบด (คนเศษ)", f"{waiting_count} คน")
-    st.write("") # เว้นบรรทัดนิดนึงให้ดูสบายตา
+    st.write("")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -170,7 +198,8 @@ with tab1:
             st.session_state.waiting_data = (waiting_teams, temp_wait)
             st.session_state.priority_players = new_priority.copy()
         
-        st.balloons()
+        # เรียกใช้แอนิเมชันไพ่ แทนลูกโป่งเดิม
+        show_tarot_animation()
 
     if st.session_state.current_matches:
         st.markdown("---")
@@ -274,7 +303,7 @@ with tab2:
                 car_passengers = [passengers_list.pop(0) for _ in range(int(car["capacity"])) if passengers_list]
                 results.append({"car_num": car["car_num"], "driver": car["driver"], "passengers": car_passengers})
                 
-        st.snow()
+        show_tarot_animation()
         st.markdown("---")
         st.subheader("🏁 ผลการจัดคนขึ้นรถ")
         
@@ -323,7 +352,7 @@ with tab3:
             teams_with_bibs = random.sample(team_indices, k=num_bibs)
             team_kickoff = random.choice(team_indices)
             
-        st.balloons()
+        show_tarot_animation()
         st.markdown("---")
         st.subheader("🏁 ผลการจัดทีมฟุตบอล")
         
@@ -375,7 +404,7 @@ with tab4:
                 grp = [grp_players.pop(0) for _ in range(target_size) if grp_players]
                 groups.append(grp)
         
-        st.snow()
+        show_tarot_animation()
         st.markdown("---")
         st.subheader("📚 สรุปรายชื่อกลุ่มทำงาน")
         
