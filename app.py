@@ -46,7 +46,7 @@ def show_tarot_animation():
 API_URL = "https://script.google.com/macros/s/AKfycbz8DpXlLxi5FzmaRYxhiWlBmNtJTdX4pLeI5z8rFRql4E8qfEo1M4g32FXNEJCB8PAy9g/exec"
 
 def load_history():
-    if API_URL == "นำ_URL_เว็บแอป_ที่ได้จาก_APPS_SCRIPT_มาวางในเครื่องหมายคำพูดนี้":
+    if API_URL == "https://script.google.com/macros/s/AKfycbz8DpXlLxi5FzmaRYxhiWlBmNtJTdX4pLeI5z8rFRql4E8qfEo1M4g32FXNEJCB8PAy9g/exec":
         return []
     try:
         res = requests.get(API_URL)
@@ -57,17 +57,19 @@ def load_history():
 def add_to_history(category, title, detail_text):
     tz = pytz.timezone('Asia/Bangkok')
     current_time = datetime.now(tz).strftime("%H:%M:%S")
-    new_log = {"category": category, "time": current_time, "title": title, "detail": detail_text}
     
-    # อัปเดตในหน้าเว็บให้แสดงผลทันที
+    # 1. ข้อมูลสำหรับอัปเดตโชว์บนหน้าเว็บทันที
+    new_log = {"category": category, "time": current_time, "title": title, "detail": detail_text}
     st.session_state.history_log.insert(0, new_log)
     
-    # ส่งข้อมูลไปเก็บถาวรที่ Google Sheets เบื้องหลัง
-    if API_URL != "นำ_URL_เว็บแอป_ที่ได้จาก_APPS_SCRIPT_มาวางในเครื่องหมายคำพูดนี้":
+    # 2. ส่งข้อมูลไปเก็บที่ Google Sheets (แอบเติม ' หน้าเวลา เพื่อกัน Google แปลงเป็นปี 1899)
+    if API_URL != "https://script.google.com/macros/s/AKfycbz8DpXlLxi5FzmaRYxhiWlBmNtJTdX4pLeI5z8rFRql4E8qfEo1M4g32FXNEJCB8PAy9g/exec":
+        gsheet_log = {"category": category, "time": f"'{current_time}", "title": title, "detail": detail_text}
         try:
-            requests.post(API_URL, json=new_log)
+            requests.post(API_URL, json=gsheet_log)
         except:
             pass
+
 # ==========================================
 
 
